@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tab-tutor
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # Point at this app's Git repo (match your other apps like todo/book/darts).
+    repoURL: https://github.com/jaysuzi5/tab-tutor.git
+    targetRevision: main
+    path: charts/tab-tutor
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tab-tutor
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,25 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tab-tutor
+  labels:
+    {{- include "tab-tutor.labels" . | nindent 4 }}
+  annotations:
+    # SSE coaching stream: disable proxy buffering so tokens flush live.
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tab-tutor
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}

@@ -1,0 +1,19 @@
+{{- if .Values.postgres.enabled }}
+# Dedicated CloudNativePG cluster for Tab Tutor (do not reuse another app's DB).
+# Creates secret `tab-tutor-db-app` with a ready `uri` the Deployment consumes.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: tab-tutor-db
+  labels:
+    {{- include "tab-tutor.labels" . | nindent 4 }}
+spec:
+  instances: {{ .Values.postgres.instances }}
+  storage:
+    size: {{ .Values.postgres.storageSize }}
+    storageClass: {{ .Values.postgres.storageClass }}
+  bootstrap:
+    initdb:
+      database: tabtutor
+      owner: tabtutor
+{{- end }}

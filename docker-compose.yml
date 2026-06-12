@@ -1,0 +1,38 @@
+# Local full-stack run: Postgres + the single app image (FastAPI serving the
+# built SPA). Mic needs a secure context — open http://localhost:8000 (localhost
+# is a secure origin); a LAN IP would block the mic.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tabtutor
+      POSTGRES_PASSWORD: tabtutor
+      POSTGRES_DB: tabtutor
+    ports:
+      - "55432:5432"
+    volumes:
+      - tt-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tabtutor"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    image: jaysuzi5/tab-tutor:dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://tabtutor:tabtutor@db:5432/tabtutor
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      SPOTIFY_ENABLED: ${SPOTIFY_ENABLED:-false}
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID:-}
+      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET:-}
+      SPOTIFY_REDIRECT_URI: http://localhost:8000/api/spotify/callback
+    ports:
+      - "8000:8000"
+
+volumes:
+  tt-pgdata:

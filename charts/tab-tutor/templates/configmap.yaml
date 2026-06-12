@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tab-tutor-config
+  labels:
+    {{- include "tab-tutor.labels" . | nindent 4 }}
+data:
+  COACH_MODEL: {{ .Values.config.coachModel | quote }}
+  FAST_MODEL: {{ .Values.config.fastModel | quote }}
+  USE_FAST_MODEL: {{ .Values.config.useFastModel | quote }}
+  MAX_TOKENS_PER_SESSION: {{ .Values.config.maxTokensPerSession | quote }}
+  MAX_OUTPUT_TOKENS: {{ .Values.config.maxOutputTokens | quote }}
+  SPOTIFY_ENABLED: {{ .Values.config.spotifyEnabled | quote }}
+  SPOTIFY_REDIRECT_URI: {{ .Values.config.spotifyRedirectUri | quote }}

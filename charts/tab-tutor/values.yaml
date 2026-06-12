@@ -1,0 +1,55 @@
+image:
+  repository: jaysuzi5/tab-tutor
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# Ingress host. NOTE: getUserMedia (mic) needs a secure context — plain HTTP over
+# the LAN blocks it. Serve via the cloudflared tunnel (TLS) or an internal-CA
+# TLS ingress. See README "mic-needs-HTTPS".
+ingress:
+  enabled: true
+  className: nginx
+  host: tab-tutor.home
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# This cluster has had scheduling issues from pods with no requests — always set.
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# App config (non-secret). Models are values, not hardcoded — verify they're
+# currently served by Groq before bumping.
+config:
+  coachModel: llama-3.3-70b-versatile
+  fastModel: llama-3.1-8b-instant
+  useFastModel: false
+  maxTokensPerSession: 20000
+  maxOutputTokens: 400
+  spotifyEnabled: false
+  spotifyRedirectUri: "https://tab-tutor.home/api/spotify/callback"
+
+# Secrets come from a SealedSecret named `tab-tutor-secrets` (GROQ_API_KEY,
+# optional SPOTIFY_*). DB creds come from the CloudNativePG `-app` secret.
+# Refs are optional so the pod still boots in dev-mode if a secret is absent.
+secretName: tab-tutor-secrets
+
+# CloudNativePG dedicated cluster (do NOT reuse another app's DB).
+postgres:
+  enabled: true
+  instances: 1
+  storageSize: 1Gi
+  storageClass: nfs-client
+
+# Client-side detection thresholds are compile-time constants in the frontend
+# (engine/chords.ts, chroma.ts, onset.ts) — documented here, tuned in code:
+#   chord simMin 0.6 / confMin 0.55, onset gate 0.012, pitch clarityMin 0.9
