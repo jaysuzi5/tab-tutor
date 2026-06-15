@@ -56,8 +56,8 @@ export interface MatchConfig {
 }
 
 export const DEFAULT_MATCH_CONFIG: MatchConfig = {
-  simMin: 0.6,
-  confMin: 0.55,
+  simMin: 0.5,
+  confMin: 0.45,
 };
 
 export function matchChord(
@@ -87,7 +87,11 @@ export function matchChord(
   // Confidence = similarity scaled by separation from the runner-up. A clear
   // winner (big margin) is trusted; a near-tie is downgraded -> tutor asks.
   const margin = best - Math.max(second, 0);
-  const confidence = Math.min(1, best * (0.5 + Math.min(0.5, margin * 2.5)));
+  // Trust the cosine similarity, with a mild tie penalty. The old curve
+  // (0.5 + margin*2.5) rejected good real-world matches (cosine ~0.7, small
+  // margin landed ~0.52 < confMin) — chroma from a real strum is never as clean
+  // as an ideal template, so it stayed null almost always.
+  const confidence = Math.min(1, best * (0.75 + Math.min(0.25, margin * 3)));
   return {
     chord: confidence >= cfg.confMin ? bestName : null,
     confidence,

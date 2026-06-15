@@ -17,7 +17,9 @@ export function micSupported(): boolean {
   );
 }
 
-export async function startMic(fftSize = 2048): Promise<MicStream> {
+// 4096 @ ~48kHz => ~11.7Hz bins: enough to separate bass chord tones (open E/G
+// strings) that 2048's ~23Hz bins smeared. ~85ms window — still responsive.
+export async function startMic(fftSize = 4096): Promise<MicStream> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error("getUserMedia unavailable (needs HTTPS or localhost)");
   }
@@ -34,6 +36,10 @@ export async function startMic(fftSize = 2048): Promise<MicStream> {
   const source = ctx.createMediaStreamSource(stream);
   const analyser = ctx.createAnalyser();
   analyser.fftSize = fftSize;
+  // Chord detection reads the frequency spectrum per-frame; the default 0.8
+  // temporal smoothing blurs strums together. The tuner reads the time-domain
+  // buffer (unaffected by this), so killing it only helps chroma.
+  analyser.smoothingTimeConstant = 0;
   source.connect(analyser);
   // Note: analyser is NOT connected to destination — we don't echo the mic.
 
