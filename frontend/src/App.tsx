@@ -2,11 +2,22 @@ import { useEffect, useState } from "react";
 import { useMic } from "./engine/useMic";
 import { PracticePage } from "./pages/PracticePage";
 import { SpeedTrainerPage } from "./pages/SpeedTrainerPage";
+import { StrummingPage } from "./pages/StrummingPage";
 
-type View = "practice" | "trainer";
+type View = "practice" | "trainer" | "strum";
 
 const viewFromHash = (): View =>
-  location.hash === "#/trainer" ? "trainer" : "practice";
+  location.hash === "#/trainer"
+    ? "trainer"
+    : location.hash === "#/strum"
+      ? "strum"
+      : "practice";
+
+const HASH: Record<View, string> = {
+  practice: "#/",
+  trainer: "#/trainer",
+  strum: "#/strum",
+};
 
 export default function App() {
   // One mic/engine instance for the whole app; pages share it so navigating
@@ -21,7 +32,7 @@ export default function App() {
   }, []);
 
   const go = (v: View) => {
-    location.hash = v === "trainer" ? "#/trainer" : "#/";
+    location.hash = HASH[v];
     setView(v);
   };
 
@@ -42,11 +53,19 @@ export default function App() {
           >
             Speed Trainer
           </button>
+          <button
+            className={view === "strum" ? "active" : ""}
+            onClick={() => go("strum")}
+          >
+            Strumming
+          </button>
         </nav>
       </header>
 
       {view === "trainer" ? (
         <SpeedTrainerPage mic={mic} />
+      ) : view === "strum" ? (
+        <StrummingPage mic={mic} />
       ) : (
         <PracticePage mic={mic} />
       )}

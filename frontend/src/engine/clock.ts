@@ -97,4 +97,25 @@ export class Metronome {
     const nearest = Math.round(rel / this.beatMs) * this.beatMs;
     return rel - nearest;
   }
+
+  // --- 8th-note grid (strumming) ---
+  get eighthMs(): number {
+    return this.beatMs / 2;
+  }
+
+  // Current 8th-note slot since music start (negative during count-in). 4/4 =>
+  // 8 eighths per bar; slot 0 is the downbeat of the first bar.
+  currentEighth(now: number): number {
+    return Math.floor((now - this.perfStart - this.countInMs) / this.eighthMs);
+  }
+
+  // Nearest 8th-note slot to a strum onset + signed timing error, or null while
+  // counting in / stopped.
+  nearestEighth(onsetPerf: number): { slot: number; errMs: number } | null {
+    if (!this.running) return null;
+    const rel = onsetPerf - this.perfStart - this.countInMs;
+    if (rel < -this.eighthMs / 2) return null;
+    const slot = Math.round(rel / this.eighthMs);
+    return { slot, errMs: rel - slot * this.eighthMs };
+  }
 }
