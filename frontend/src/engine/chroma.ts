@@ -53,6 +53,14 @@ export class ChromaExtractor {
       if (db < this.cfg.dbFloor) continue;
       out[pc] += Math.pow(10, db / 20); // dB -> linear magnitude
     }
+    // Whiten: subtract the mean and clamp. Guitar chroma has broadband energy
+    // in every bin (room noise, body resonance), which caps cosine similarity
+    // to the sparse 3-note templates. Removing that flat floor lets the actual
+    // chord tones dominate -> higher, truer confidence + cleaner separation.
+    let mean = 0;
+    for (let i = 0; i < 12; i++) mean += out[i];
+    mean /= 12;
+    for (let i = 0; i < 12; i++) out[i] = Math.max(0, out[i] - mean);
     // L2 normalize so loud/quiet strums compare equally (cosine-ready).
     let norm = 0;
     for (let i = 0; i < 12; i++) norm += out[i] * out[i];

@@ -11,6 +11,40 @@ import { rms } from "./mic";
 import { makeEvent, type LiveDetection, type PlayEvent } from "./playEvent";
 
 const SMOOTH_FRAMES = 5; // ~80ms majority vote stabilizes the live chord
+// After a strum onset, wait for the pick-attack transient to pass and the notes
+// to ring before sampling the chord for the scored PlayEvent. Sampling AT the
+// onset caught the noisy transient (or the dying previous chord) -> false misses.
+const SETTLE_MS = 110;
+
+interface Vote {
+  chord: string | null;
+  conf: number;
+}
+
+// Majority vote over a set of per-frame matches; confidence = mean of the
+// frames that agreed with the winner.
+function voteChord(votes: Vote[], minFrac = 0.5): Vote {
+  const counts = new Map<string, { n: number; sum: number }>();
+  for (const v of votes) {
+    if (!v.chord) continue;
+    const c = counts.get(v.chord) ?? { n: 0, sum: 0 };
+    c.n++;
+    c.sum += v.conf;
+    counts.set(v.chord, c);
+  }
+  let best: string | null = null,
+    bestN = 0,
+    bestConf = 0;
+  for (const [chord, c] of counts) {
+    if (c.n > bestN) {
+      bestN = c.n;
+      best = chord;
+      bestConf = c.sum / c.n;
+    }
+  }
+  const need = Math.max(1, Math.ceil(votes.length * minFrac));
+  return bestN >= need ? { chord: best, conf: bestConf } : { chord: null, conf: bestConf };
+}
 
 export interface EngineFrame {
   pitch: PitchResult;
@@ -23,8 +57,17 @@ export class PracticeEngine {
   private onset: OnsetDetector;
   private buf: Float32Array<ArrayBuffer>;
   private chromaVec = new Float32Array(12);
-  private history: { chord: string | null; conf: number }[] = [];
+  private history: Vote[] = [];
   private startMs: number;
+  // Open settle window after an onset (captured at onset; emitted once settled).
+  private pending: {
+    onsetMs: number;
+    expected: string | null;
+    timingErrMs: number | null;
+    inTune: boolean | null;
+    centsOff: number | null;
+  } | null = null;
+  private settleVotes: Vote[] = [];
 
   // Practice context, settable by the UI as the song/cursor advances.
   expected: string | null = null;
@@ -45,28 +88,10 @@ export class PracticeEngine {
   }
 
   private smoothed(): LiveDetection {
-    // Majority vote over recent frames; confidence = mean of agreeing frames.
-    const counts = new Map<string, { n: number; sum: number }>();
-    for (const h of this.history) {
-      if (!h.chord) continue;
-      const c = counts.get(h.chord) ?? { n: 0, sum: 0 };
-      c.n++;
-      c.sum += h.conf;
-      counts.set(h.chord, c);
-    }
-    let best: string | null = null,
-      bestN = 0,
-      bestConf = 0;
-    for (const [chord, c] of counts) {
-      if (c.n > bestN) {
-        bestN = c.n;
-        best = chord;
-        bestConf = c.sum / c.n;
-      }
-    }
+    const v = voteChord(this.history, 0.5);
     return {
-      chord: bestN >= Math.ceil(SMOOTH_FRAMES / 2) ? best : null,
-      confidence: best ? bestConf : 0,
+      chord: v.chord,
+      confidence: v.chord ? v.conf : 0,
       chroma: this.chromaVec,
       runnerUp: null,
     };
@@ -83,22 +108,40 @@ export class PracticeEngine {
     this.history.push({ chord: match.chord, conf: match.confidence });
     if (this.history.length > SMOOTH_FRAMES) this.history.shift();
 
+    // A new strum opens a settle window. Expected/timing are captured NOW (at
+    // the attack), but the detected chord is voted from the frames that follow,
+    // once the pick transient has passed and the strings ring.
     if (this.onset.detect(level, nowMs)) {
-      const live = this.smoothed();
-      const detected = live.chord ?? match.chord;
-      const conf = live.chord ? live.confidence : match.confidence;
-      this.onEvent?.(
-        makeEvent({
-          t: (nowMs - this.startMs) / 1000,
-          expected: this.expected,
-          detected,
-          onsetMs: nowMs - this.startMs,
-          timingErrMs: this.timingFn?.(nowMs) ?? null,
-          inTune: pitch.reading ? Math.abs(pitch.reading.cents) <= 8 : null,
-          centsOff: pitch.reading?.cents ?? null,
-          confidence: conf,
-        }),
-      );
+      this.pending = {
+        onsetMs: nowMs,
+        expected: this.expected,
+        timingErrMs: this.timingFn?.(nowMs) ?? null,
+        inTune: pitch.reading ? Math.abs(pitch.reading.cents) <= 8 : null,
+        centsOff: pitch.reading?.cents ?? null,
+      };
+      this.settleVotes = [];
+    }
+
+    if (this.pending) {
+      this.settleVotes.push({ chord: match.chord, conf: match.confidence });
+      if (nowMs - this.pending.onsetMs >= SETTLE_MS) {
+        const v = voteChord(this.settleVotes, 0.4);
+        const p = this.pending;
+        this.onEvent?.(
+          makeEvent({
+            t: (p.onsetMs - this.startMs) / 1000,
+            expected: p.expected,
+            detected: v.chord,
+            onsetMs: p.onsetMs - this.startMs,
+            timingErrMs: p.timingErrMs,
+            inTune: p.inTune,
+            centsOff: p.centsOff,
+            confidence: v.conf,
+          }),
+        );
+        this.pending = null;
+        this.settleVotes = [];
+      }
     }
 
     return { pitch, live: this.smoothed() };
