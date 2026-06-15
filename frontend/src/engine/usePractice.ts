@@ -30,9 +30,23 @@ export function usePractice({
   const rafRef = useRef(0);
   const [playing, setPlaying] = useState(false);
   const [countIn, setCountIn] = useState(0);
+  const [done, setDone] = useState(false);
 
   const cfgRef = useRef({ tempo, mode, drillStart });
   cfgRef.current = { tempo, mode, drillStart };
+
+  // Called when Play-through reaches the last chord: stop transport but leave
+  // the cursor on the final chord. Kept in a ref so the loop's deps stay stable.
+  const endSongRef = useRef<() => void>(() => {});
+  endSongRef.current = () => {
+    cancelAnimationFrame(rafRef.current);
+    metroRef.current.stop();
+    setTiming(null);
+    setExpected(null);
+    setPlaying(false);
+    setCountIn(0);
+    setDone(true);
+  };
 
   const loop = useCallback(() => {
     const m = metroRef.current;
@@ -45,13 +59,21 @@ export function usePractice({
       setCountIn(0);
       const beat = m.currentMusicBeat(now);
       const { mode, drillStart } = cfgRef.current;
-      const win =
-        mode === "drill"
-          ? { start: drillStart, end: Math.min(drillStart + 2, tl.chords.length) }
-          : undefined;
-      const idx = chordIndexAt(tl, beat, win);
-      setExpected(tl.chords[idx] ?? null);
-      onCursor(idx);
+      // Play-through runs once to the end and stops; Drill loops a window.
+      if (mode === "playthrough") {
+        const seg = Math.floor(beat / tl.beatsPerChord);
+        if (seg >= tl.chords.length) {
+          endSongRef.current();
+          return; // stop scheduling — song finished
+        }
+        setExpected(tl.chords[seg] ?? null);
+        onCursor(seg);
+      } else {
+        const win = { start: drillStart, end: Math.min(drillStart + 2, tl.chords.length) };
+        const idx = chordIndexAt(tl, beat, win);
+        setExpected(tl.chords[idx] ?? null);
+        onCursor(idx);
+      }
     }
     rafRef.current = requestAnimationFrame(loop);
   }, [tl, setExpected, onCursor]);
@@ -61,6 +83,7 @@ export function usePractice({
     m.start(cfgRef.current.tempo, 4);
     setTiming((onset) => m.timingErrMs(onset));
     setPlaying(true);
+    setDone(false);
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(loop);
   }, [loop, setTiming]);
@@ -73,6 +96,7 @@ export function usePractice({
     onCursor(-1);
     setPlaying(false);
     setCountIn(0);
+    setDone(false);
   }, [setTiming, setExpected, onCursor]);
 
   // Tempo change while playing re-anchors the grid (restart with count-in).
@@ -89,5 +113,5 @@ export function usePractice({
 
   useEffect(() => () => stop(), [stop]);
 
-  return { playing, countIn, play, stop, timeline: tl };
+  return { playing, countIn, done, play, stop, timeline: tl };
 }

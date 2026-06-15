@@ -9,11 +9,13 @@ export function ChartView({
   chords,
   activeChord = null,
   cursorIndex = -1,
+  cursorState = null,
 }: {
   chordpro: string;
   chords?: string[]; // authoritative chord list from the backend song model
   activeChord?: string | null;
   cursorIndex?: number;
+  cursorState?: "pending" | "hit" | "miss" | null; // color of the current chord
 }) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const { html, meta } = useMemo(() => {
@@ -38,16 +40,28 @@ export function ChartView({
   useEffect(() => {
     const root = sheetRef.current;
     if (!root) return;
-    const tokens = root.querySelectorAll<HTMLElement>(".chord");
+    // chordsheetjs emits an empty .chord span above lyric syllables that have
+    // no chord. Index only the NON-EMPTY tokens so cursorIndex (from the
+    // timeline of real chords) lines up with the actual chords on the sheet —
+    // otherwise the cursor lands on blanks and never reaches the song's end.
+    const tokens = [...root.querySelectorAll<HTMLElement>(".chord")].filter(
+      (el) => (el.textContent?.trim() ?? "") !== "",
+    );
     tokens.forEach((el, i) => {
       const hit = !!activeChord && el.textContent?.trim() === activeChord;
       el.classList.toggle("chord-active", hit);
-      el.classList.toggle("chord-cursor", i === cursorIndex);
+      const onCursor = i === cursorIndex;
+      el.classList.toggle("chord-cursor", onCursor);
+      // Color the current chord: orange = play now, green = heard correct,
+      // red = heard wrong / nothing right yet.
+      el.classList.toggle("cur-pending", onCursor && cursorState === "pending");
+      el.classList.toggle("cur-hit", onCursor && cursorState === "hit");
+      el.classList.toggle("cur-miss", onCursor && cursorState === "miss");
     });
     if (cursorIndex >= 0 && tokens[cursorIndex]) {
       tokens[cursorIndex].scrollIntoView({ block: "center", behavior: "smooth" });
     }
-  }, [activeChord, cursorIndex, html]);
+  }, [activeChord, cursorIndex, cursorState, html]);
 
   return (
     <div className="chart">

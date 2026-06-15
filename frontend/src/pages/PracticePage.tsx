@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { MicApi } from "../engine/useMic";
 import { usePractice, type Mode } from "../engine/usePractice";
 import { buildTimeline } from "../engine/timeline";
@@ -84,7 +84,30 @@ export function PracticePage({ mic }: { mic: MicApi }) {
     onCursor: setCursorIndex,
   });
 
-  const progression = chordpro ? buildTimeline(chordpro).chords : [];
+  const progression = useMemo(
+    () => (chordpro ? buildTimeline(chordpro).chords : []),
+    [chordpro],
+  );
+
+  // Color the current Play-through/Drill chord: orange (play now) -> green
+  // (heard correct, latched) -> red (heard a wrong chord, not yet correct).
+  const [cursorState, setCursorState] = useState<"pending" | "hit" | "miss" | null>(null);
+  const hitRef = useRef(false);
+  useEffect(() => {
+    hitRef.current = false;
+    setCursorState(cursorIndex >= 0 ? "pending" : null);
+  }, [cursorIndex]);
+  useEffect(() => {
+    if (cursorIndex < 0) return;
+    const expected = progression[cursorIndex];
+    const live = frame?.live.chord ?? null;
+    if (live === expected) {
+      hitRef.current = true;
+      setCursorState("hit");
+    } else if (!hitRef.current) {
+      setCursorState(live ? "miss" : "pending");
+    }
+  }, [frame, cursorIndex, progression]);
 
   return (
     <main className="layout">
@@ -116,11 +139,15 @@ export function PracticePage({ mic }: { mic: MicApi }) {
               drillStart={drillStart}
               setDrillStart={setDrillStart}
             />
+            {practice.done && (
+              <p className="done-banner">🎉 Reached the end — nice run! Hit Play to go again.</p>
+            )}
             <ChartView
               chordpro={chordpro}
               chords={chords}
-              activeChord={activeChord}
+              activeChord={mode === "playthrough" || mode === "drill" ? null : activeChord}
               cursorIndex={cursorIndex}
+              cursorState={cursorState}
             />
           </>
         )}
