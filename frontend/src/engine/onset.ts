@@ -9,8 +9,10 @@ export interface OnsetConfig {
 }
 
 export const DEFAULT_ONSET_CONFIG: OnsetConfig = {
-  gate: 0.012,
-  riseRatio: 1.8,
+  gate: 0.01,
+  // 1.8x rise missed strums into already-ringing strings (fast changes). 1.4x
+  // catches normal strums while still ignoring steady sustain.
+  riseRatio: 1.4,
   refractoryMs: 120,
 };
 

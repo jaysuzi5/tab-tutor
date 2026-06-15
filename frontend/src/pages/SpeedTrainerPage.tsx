@@ -29,15 +29,19 @@ export function SpeedTrainerPage({ mic }: { mic: MicApi }) {
   const [count, setCount] = useState(0);
   const [result, setResult] = useState<{ count: number; duration: number } | null>(null);
   const [flash, setFlash] = useState(false); // green pulse on a correct change
-  // Advance on a fresh strum (settled PlayEvent), NOT on sustained ringing —
-  // a decaying previous chord overlaps in pitch and would falsely advance.
-  const lastOnsetRef = useRef(-1);
+  // A strum opens a short window; within it the (reliable) live detector decides
+  // the chord. Keeps v1's sensitivity while still requiring a fresh strum, so a
+  // ringing/decaying previous chord can't drift into a false match.
+  const lastOnsetMsRef = useRef(-1); // engine-clock onsetMs of last seen event
+  const windowUntilRef = useRef(0); // perf-clock deadline of the open strum window
+  const STRUM_WINDOW_MS = 800;
 
   const startSession = () => {
     setResult(null);
     setCount(0);
     setTimeLeft(duration);
-    lastOnsetRef.current = events.length ? events[events.length - 1].onsetMs : -1;
+    lastOnsetMsRef.current = events.length ? events[events.length - 1].onsetMs : -1;
+    windowUntilRef.current = 0;
     setTarget(pickNext(null));
     setActive(true);
   };
@@ -67,21 +71,27 @@ export function SpeedTrainerPage({ mic }: { mic: MicApi }) {
     return () => setExpected(null);
   }, [active, target, setExpected]);
 
-  // Advance only when a NEW strum onset resolves to the target chord. Each
-  // PlayEvent is one strum (the engine's onset + settle), so a ringing previous
-  // chord can't trigger it — the player must actually re-strum.
+  // A new strum (onset PlayEvent) opens the match window.
+  useEffect(() => {
+    if (!active || !events.length) return;
+    const latest = events[events.length - 1].onsetMs;
+    if (latest > lastOnsetMsRef.current) {
+      lastOnsetMsRef.current = latest;
+      windowUntilRef.current = performance.now() + STRUM_WINDOW_MS;
+    }
+  }, [events, active]);
+
+  // Advance when the live detector reads the target AND a strum window is open.
   useEffect(() => {
     if (!active || !target) return;
-    const fresh = events.filter((e) => e.onsetMs > lastOnsetRef.current);
-    if (!fresh.length) return;
-    lastOnsetRef.current = fresh[fresh.length - 1].onsetMs;
-    if (fresh.some((e) => e.detected === target)) {
+    if (frame?.live.chord === target && performance.now() < windowUntilRef.current) {
+      windowUntilRef.current = 0; // consume the window
       setCount((c) => c + 1);
       setTarget((t) => pickNext(t));
       setFlash(true);
       setTimeout(() => setFlash(false), 200);
     }
-  }, [events, active, target]);
+  }, [frame, active, target]);
 
   const perMin = result ? Math.round((result.count / result.duration) * 60) : 0;
 
