@@ -6,11 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import type { MicApi } from "../engine/useMic";
 import { LiveChord } from "../ui/LiveChord";
 import { Calibration } from "../ui/Calibration";
+import { ChordDiagram } from "../ui/ChordDiagram";
 
 // Beginner open-chord pool (the cowboy chords the detector handles well).
 const POOL = ["G", "C", "D", "Em", "Am", "E", "A", "Dm"];
 const DURATIONS = [30, 60, 120];
-const HOLD_FRAMES = 3; // brief sustain so a clean strum counts once
 
 function pickNext(prev: string | null): string {
   let n = POOL[Math.floor(Math.random() * POOL.length)];
@@ -19,7 +19,7 @@ function pickNext(prev: string | null): string {
 }
 
 export function SpeedTrainerPage({ mic }: { mic: MicApi }) {
-  const { status, frame, start, setExpected } = mic;
+  const { status, frame, events, start, setExpected } = mic;
   const running = status === "running";
 
   const [active, setActive] = useState(false);
@@ -29,13 +29,15 @@ export function SpeedTrainerPage({ mic }: { mic: MicApi }) {
   const [count, setCount] = useState(0);
   const [result, setResult] = useState<{ count: number; duration: number } | null>(null);
   const [flash, setFlash] = useState(false); // green pulse on a correct change
-  const holdRef = useRef(0);
+  // Advance on a fresh strum (settled PlayEvent), NOT on sustained ringing —
+  // a decaying previous chord overlaps in pitch and would falsely advance.
+  const lastOnsetRef = useRef(-1);
 
   const startSession = () => {
     setResult(null);
     setCount(0);
     setTimeLeft(duration);
-    holdRef.current = 0;
+    lastOnsetRef.current = events.length ? events[events.length - 1].onsetMs : -1;
     setTarget(pickNext(null));
     setActive(true);
   };
@@ -65,22 +67,21 @@ export function SpeedTrainerPage({ mic }: { mic: MicApi }) {
     return () => setExpected(null);
   }, [active, target, setExpected]);
 
-  // Advance when the correct chord is heard and held briefly.
+  // Advance only when a NEW strum onset resolves to the target chord. Each
+  // PlayEvent is one strum (the engine's onset + settle), so a ringing previous
+  // chord can't trigger it — the player must actually re-strum.
   useEffect(() => {
     if (!active || !target) return;
-    if (frame?.live.chord === target) {
-      holdRef.current++;
-      if (holdRef.current >= HOLD_FRAMES) {
-        holdRef.current = 0;
-        setCount((c) => c + 1);
-        setTarget((t) => pickNext(t));
-        setFlash(true);
-        setTimeout(() => setFlash(false), 200);
-      }
-    } else {
-      holdRef.current = 0;
+    const fresh = events.filter((e) => e.onsetMs > lastOnsetRef.current);
+    if (!fresh.length) return;
+    lastOnsetRef.current = fresh[fresh.length - 1].onsetMs;
+    if (fresh.some((e) => e.detected === target)) {
+      setCount((c) => c + 1);
+      setTarget((t) => pickNext(t));
+      setFlash(true);
+      setTimeout(() => setFlash(false), 200);
     }
-  }, [frame, active, target]);
+  }, [events, active, target]);
 
   const perMin = result ? Math.round((result.count / result.duration) * 60) : 0;
 
@@ -136,6 +137,7 @@ export function SpeedTrainerPage({ mic }: { mic: MicApi }) {
                 </div>
               </div>
               <div className={`speed-target ${flash ? "got" : ""}`}>{target}</div>
+              {target && <ChordDiagram chord={target} />}
               <p className="muted">
                 {frame?.live.chord
                   ? `hearing: ${frame.live.chord}`

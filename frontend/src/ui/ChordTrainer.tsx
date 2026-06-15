@@ -4,6 +4,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { EngineFrame } from "../engine/engine";
+import { ChordDiagram } from "./ChordDiagram";
 
 const HOLD_FRAMES = 8; // sustain the chord briefly to count as "got it"
 
@@ -53,6 +54,9 @@ export function ChordTrainer({
         <span className="trainer-clean muted">accuracy {cleanPct}%</span>
       </div>
       <div className={`trainer-target ${got ? "got" : ""}`}>{target}</div>
+      <div className="trainer-diagram">
+        <ChordDiagram chord={target} size={0.85} />
+      </div>
       <div className="trainer-status">
         {got ? (
           <>

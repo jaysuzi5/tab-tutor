@@ -1,0 +1,24 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "🎸 Tab Tutor" [level=1] [ref=e5]
+    - navigation [ref=e6]:
+      - button "Practice" [ref=e7] [cursor=pointer]
+      - button "Speed Trainer" [ref=e8] [cursor=pointer]
+  - main [ref=e9]:
+    - generic [ref=e11]:
+      - heading "Chord change speed trainer" [level=2] [ref=e12]
+      - paragraph [ref=e13]: Play the chord shown. As soon as the engine hears it, the next random chord appears. How many clean changes can you make before time runs out?
+      - generic [ref=e14]:
+        - heading "Let's hear your guitar" [level=3] [ref=e15]
+        - paragraph [ref=e16]:
+          - text: 🎙️ Your mic is used only to listen to your guitar, right here in your browser.
+          - strong [ref=e17]: Raw audio never leaves this device
+          - text: and is never uploaded or sent to any AI. Only tiny structured features (the chord we heard, timing, confidence) are used — and only when you start a session.
+        - button "Enable mic" [ref=e18] [cursor=pointer]
+    - complementary [ref=e19]:
+      - generic [ref=e20]:
+        - heading "How to improve" [level=3] [ref=e21]
+        - paragraph [ref=e22]:
+          - text: Track your
+          - strong [ref=e23]: changes/min
+          - text: over days. Switching cleanly between chords — not holding one — is the beginner unlock. Start at 60s, aim to beat your last score.
