@@ -90,3 +90,5 @@ export function useMic() {
 
   return { status, frame, events, summary, start, stop, setExpected, setTiming, setMode };
 }
+
+export type MicApi = ReturnType<typeof useMic>;

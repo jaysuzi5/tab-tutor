@@ -30,6 +30,42 @@ body {
 .topbar h1 { margin: 0; font-size: 22px; }
 .muted { color: var(--muted); font-size: 14px; }
 
+/* top nav */
+.nav { display: flex; gap: 6px; margin-left: auto; }
+.nav button {
+  margin: 0; background: var(--chip); color: var(--ink); font-weight: 600;
+  padding: 7px 14px; border-radius: 8px;
+}
+.nav button.active { background: var(--accent); color: #07210f; }
+
+/* speed trainer */
+.trainer-page {
+  background: var(--panel); border: 1px solid #262b33; border-radius: 12px;
+  padding: 24px; text-align: center;
+}
+.trainer-page h2 { margin: 0 0 8px; }
+.trainer-page > .muted { display: block; margin-bottom: 20px; }
+.speed-setup { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.duration-pick { display: flex; gap: 6px; }
+.speed-start {
+  margin-top: 8px; font-size: 16px; padding: 12px 32px;
+}
+.speed-result { margin-bottom: 16px; }
+.speed-result-big {
+  font-size: 64px; font-weight: 800; color: var(--accent); line-height: 1;
+}
+.speed-run { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.speed-stats { display: flex; gap: 48px; margin-bottom: 8px; }
+.speed-num {
+  font-size: 36px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.speed-num.warn { color: var(--warn); }
+.speed-target {
+  font-size: 120px; font-weight: 800; line-height: 1; margin: 10px 0;
+  transition: color 100ms, transform 100ms;
+}
+.speed-target.got { color: var(--accent); transform: scale(1.12); }
+
 .layout {
   display: grid; grid-template-columns: 1fr 340px; gap: 16px; margin-top: 16px;
 }

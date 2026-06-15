@@ -30,6 +30,9 @@ export interface SessionSummary {
 }
 
 const LOW_CONF = 0.6;
+// Below this, a detection is treated as "unsure" and excluded from hit/miss
+// accounting (so accuracy reflects confident right-vs-wrong plays only).
+const SCORE_CONF = 0.5;
 
 export class Scorer {
   private events: PlayEvent[] = [];
@@ -49,7 +52,11 @@ export class Scorer {
     this.events.push(e);
     if (e.confidence < LOW_CONF) this.lowConfCount++;
 
-    if (e.expected) {
+    // Only score confident reads. An unsure (null) or low-confidence detection
+    // means the engine didn't clearly hear a chord — don't punish that as a
+    // miss (the humble-fallback contract), or accuracy collapses on transients
+    // and quiet frames even when the player is nailing it.
+    if (e.expected && e.detected && e.confidence >= SCORE_CONF) {
       const stat = this.perChord.get(e.expected) ?? {
         hits: 0,
         misses: 0,

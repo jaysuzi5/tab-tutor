@@ -1,0 +1,40 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "🎸 Tab Tutor" [level=1] [ref=e5]
+    - navigation [ref=e6]:
+      - button "Practice" [ref=e7] [cursor=pointer]
+      - button "Speed Trainer" [ref=e8] [cursor=pointer]
+  - main [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e12]:
+        - combobox [ref=e13]
+        - button "Import" [ref=e14] [cursor=pointer]
+      - generic [ref=e16]:
+        - button "Learn" [ref=e17] [cursor=pointer]
+        - button "Play-through" [ref=e18] [cursor=pointer]
+        - button "Drill" [ref=e19] [cursor=pointer]
+      - generic [ref=e21]:
+        - heading [level=2]
+        - paragraph [ref=e22]: · key · bpm
+        - paragraph
+    - complementary [ref=e23]:
+      - generic [ref=e24]:
+        - heading "Tutor" [level=3] [ref=e25]
+        - generic [ref=e26]:
+          - generic [ref=e27]: Hit “Coach me” for feedback on your last run.
+          - button "Coach me" [ref=e29] [cursor=pointer]
+          - generic [ref=e30]:
+            - textbox "Ask the tutor… (why is F so hard?)" [ref=e31]
+            - button "Ask" [disabled] [ref=e32]
+      - generic [ref=e33]:
+        - heading "Tuner" [level=3] [ref=e34]
+        - generic [ref=e35]:
+          - generic [ref=e36]: —
+          - generic [ref=e40]: play a single string…
+      - generic [ref=e42]:
+        - heading "Let's hear your guitar" [level=3] [ref=e43]
+        - paragraph [ref=e44]:
+          - text: 🎙️ Your mic is used only to listen to your guitar, right here in your browser.
+          - strong [ref=e45]: Raw audio never leaves this device
+          - text: and is never uploaded or sent to any AI. Only tiny structured features (the chord we heard, timing, confidence) are used — and only when you start a session.
+        - button "Enable mic" [ref=e46] [cursor=pointer]
