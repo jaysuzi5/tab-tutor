@@ -311,6 +311,25 @@ code { background: #11141a; padding: 1px 5px; border-radius: 4px; }
   background: #ef4444; color: #fff;
   box-shadow: 0 0 0 2px rgba(239,68,68,0.5);
 }
+/* spotify player */
+.spotify-search { display: flex; gap: 6px; }
+.spotify-search input {
+  flex: 1; background: #11141a; border: 1px solid #262b33; color: var(--ink);
+  border-radius: 8px; padding: 7px 9px; font-size: 13px;
+}
+.spotify-search button { margin-top: 0; }
+.spotify-results { list-style: none; margin: 8px 0 0; padding: 0; }
+.spotify-results li { margin: 2px 0; }
+.spotify-results button {
+  width: 100%; text-align: left; background: var(--chip); color: var(--ink);
+  font-weight: 400; margin: 0; padding: 7px 10px; border-radius: 8px; font-size: 13px;
+}
+.spotify-now {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 10px;
+}
+.spotify-now button { margin-top: 0; }
+
 .done-banner {
   background: rgba(74,222,128,0.15); border: 1px solid var(--accent);
   border-radius: 8px; padding: 8px 12px; color: var(--accent);

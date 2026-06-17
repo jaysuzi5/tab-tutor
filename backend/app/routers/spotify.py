@@ -14,7 +14,11 @@ router = APIRouter(prefix="/api/spotify", tags=["spotify"])
 
 _AUTH = "https://accounts.spotify.com/authorize"
 _TOKEN = "https://accounts.spotify.com/api/token"
-_SCOPES = "streaming user-read-email user-read-private"
+# streaming = Web Playback SDK; modify/read-playback = search-and-play control.
+_SCOPES = (
+    "streaming user-read-email user-read-private "
+    "user-modify-playback-state user-read-playback-state"
+)
 
 
 def _guard():

@@ -1,6 +1,6 @@
 image:
   repository: jaysuzi5/tab-tutor
-  tag: "0.1.8"
+  tag: "0.1.9"
   pullPolicy: IfNotPresent
 
 replicaCount: 1
@@ -36,7 +36,7 @@ config:
   maxTokensPerSession: 20000
   maxOutputTokens: 400
   spotifyEnabled: false
-  spotifyRedirectUri: "https://tab-tutor.home/api/spotify/callback"
+  spotifyRedirectUri: "https://tab-tutor.jaycurtis.org/api/spotify/callback"
 
 # Secrets come from a SealedSecret named `tab-tutor-secrets` (GROQ_API_KEY,
 # optional SPOTIFY_*). DB creds come from the CloudNativePG `-app` secret.
