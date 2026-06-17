@@ -4,7 +4,7 @@
 
 import { useRef, useState } from "react";
 import {
-  importChordPro, importFile, importPdf, getSong, updateSong, deleteSong,
+  importText, importFile, importPdf, getSong, updateSong, deleteSong,
   type SongMeta,
 } from "../api";
 
@@ -22,6 +22,10 @@ export function SongPicker({
   const [open, setOpen] = useState(false);
   const [cp, setCp] = useState("");
   const [title, setTitle] = useState("");
+  const [pArtist, setPArtist] = useState("");
+  const [pBpm, setPBpm] = useState("");
+  const [pKey, setPKey] = useState("");
+  const [pCapo, setPCapo] = useState(0);
   const [url, setUrl] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -90,6 +94,10 @@ export function SongPicker({
       setOpen(false);
       setCp("");
       setTitle("");
+      setPArtist("");
+      setPBpm("");
+      setPKey("");
+      setPCapo(0);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "import failed");
     } finally {
@@ -148,24 +156,54 @@ export function SongPicker({
       {open && (
         <div className="import-panel">
           <div className="import-block">
-            <h4>Paste a ChordPro / chord sheet</h4>
-            <input
-              placeholder="Title (optional)"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <h4>Paste a chord sheet (chords above lyrics)</h4>
+            <div className="paste-fields">
+              <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <input placeholder="Singer / artist" value={pArtist} onChange={(e) => setPArtist(e.target.value)} />
+              <input
+                type="number"
+                placeholder="BPM"
+                value={pBpm}
+                onChange={(e) => setPBpm(e.target.value)}
+              />
+              <input placeholder="Key" value={pKey} onChange={(e) => setPKey(e.target.value)} />
+              <label className="capo-field">
+                Capo
+                <select value={pCapo} onChange={(e) => setPCapo(Number(e.target.value))}>
+                  {Array.from({ length: 13 }, (_, n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <textarea
-              rows={5}
-              placeholder={"{title: ...}\n[G]Your [C]chords [D]here"}
+              className="mono"
+              rows={10}
+              placeholder={"[Verse]\n      G        Em\nI found a love for me"}
               value={cp}
               onChange={(e) => setCp(e.target.value)}
             />
             <button
-              disabled={!cp.trim()}
-              onClick={() => handle(() => importChordPro(cp, title || undefined))}
+              disabled={!cp.trim() || !title.trim() || busy}
+              onClick={() =>
+                handle(() =>
+                  importText({
+                    title,
+                    artist: pArtist || undefined,
+                    bpm: pBpm ? Number(pBpm) : undefined,
+                    key: pKey || undefined,
+                    capo: pCapo,
+                    text: cp,
+                  }),
+                )
+              }
             >
-              Save chord sheet
+              {busy ? "Converting…" : "Convert & save"}
             </button>
+            <p className="muted small">
+              Paste chords-above-lyrics text. We align the chords, build the chart,
+              and link the Spotify track.
+            </p>
           </div>
 
           <div className="import-block">

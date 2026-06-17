@@ -149,6 +149,32 @@ def update_song(song_id: str, patch: dict) -> Song | None:
     return s
 
 
+def import_text(meta: dict, spotify_uri: str | None) -> Song:
+    """Store a song from a pasted space-delimited chord sheet + form fields."""
+    import uuid
+    from . import align
+    from .repo import REPO
+    sid = "imp-" + uuid.uuid4().hex[:8]
+    chordpro = align.parse_spacetext(meta.get("text", ""))
+    song = Song(
+        id=sid,
+        title=meta.get("title") or "Imported song",
+        artist=meta.get("artist"),
+        key=meta.get("key"),
+        tempo=meta.get("bpm"),
+        capo=meta.get("capo"),
+        chords=_chords_from_chordpro(chordpro),
+        format="chordpro",
+        isBuiltin=False,
+        source="text import",
+        license="user-supplied",
+        spotifyUri=spotify_uri,
+        chordpro=chordpro,
+    )
+    REPO.save_import(song)
+    return song
+
+
 def import_converted(fields: dict, spotify_uri: str | None) -> Song:
     """Store a ChordPro song produced from a PDF conversion (fields from Groq)."""
     import uuid

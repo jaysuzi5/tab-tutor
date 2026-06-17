@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import Response
-from ..models import Song, SongMeta, ImportChordProReq, PatchSongReq
+from ..models import Song, SongMeta, ImportChordProReq, ImportTextReq, PatchSongReq
 from .. import songs
 
 router = APIRouter(prefix="/api/songs", tags=["songs"])
@@ -19,6 +19,18 @@ def import_chordpro(req: ImportChordProReq):
     if not req.text.strip():
         raise HTTPException(400, "empty chordpro")
     return songs.import_chordpro(req.text, req.title)
+
+
+@router.post("/import/text", response_model=Song)
+async def import_text(req: ImportTextReq):
+    if not req.text.strip():
+        raise HTTPException(400, "empty chord text")
+    from ..spotify_app import find_track
+    spotify_uri = None
+    track = await find_track(f"{req.title} {req.artist or ''}".strip())
+    if track:
+        spotify_uri = track["uri"]
+    return songs.import_text(req.model_dump(), spotify_uri)
 
 
 @router.post("/import/file", response_model=Song)

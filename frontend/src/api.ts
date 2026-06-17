@@ -53,6 +53,25 @@ export async function importFile(file: File): Promise<Song> {
   return r.json();
 }
 
+export interface TextImport {
+  title: string;
+  artist?: string;
+  bpm?: number;
+  key?: string;
+  capo?: number;
+  text: string;
+}
+
+export async function importText(req: TextImport): Promise<Song> {
+  const r = await fetch("/api/songs/import/text", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? "import failed");
+  return r.json();
+}
+
 export async function importPdf(file: File): Promise<Song> {
   const fd = new FormData();
   fd.append("file", file);

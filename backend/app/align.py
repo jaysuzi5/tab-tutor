@@ -173,3 +173,86 @@ def align(words: list) -> dict:
 
 def chord_count(chordpro: str) -> int:
     return len(re.findall(r"\[[^\]]+\]", chordpro))
+
+
+# --- Plain-text paste parser ------------------------------------------------
+# The user pastes a monospace chord sheet (chords on a line above the lyric,
+# positioned by spaces). Because the spacing is exact, we align off true
+# character columns — no coordinate estimation, no LLM. This is the reliable
+# path. Handles [Section] headers and |measure/riff| lines (kept verbatim).
+
+_SECTION_LINE = re.compile(r"^\[.*\]$")
+
+
+def _is_chord_token(t: str) -> bool:
+    return bool(CHORD_RE.match(t.strip("()")))
+
+
+def _is_chord_text_line(line: str) -> bool:
+    if "|" in line:  # measure/rhythm line, not a plain chord line
+        return False
+    toks = line.split()
+    if not toks or len(toks) > 16:
+        return False
+    hits = sum(1 for t in toks if _is_chord_token(t))
+    return hits / len(toks) >= 0.6
+
+
+def _merge_text(chord_line: str, lyric: str) -> str:
+    """Insert each chord into the lyric at the chord token's character column."""
+    res, pos = "", 0
+    for m in re.finditer(r"\S+", chord_line):
+        col, tok = m.start(), m.group().strip("()")
+        if not _is_chord_token(tok):
+            continue
+        if pos < col:
+            if col <= len(lyric):
+                res += lyric[pos:col]
+            else:
+                res += lyric[pos:] + " "
+            pos = min(col, len(lyric)) if col <= len(lyric) else len(lyric)
+        res += f"[{tok}]"
+    if pos < len(lyric):
+        res += lyric[pos:]
+    return res.rstrip()
+
+
+def parse_spacetext(raw: str) -> str:
+    lines = raw.replace("\t", "    ").split("\n")
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i].rstrip()
+        stripped = line.strip()
+        if not stripped:
+            i += 1
+            continue
+        if _SECTION_LINE.match(stripped):
+            out.append(f"{{comment: {stripped.strip('[]')}}}")
+            i += 1
+            continue
+        if "|" in line:  # measure / riff line -> keep verbatim
+            out.append(stripped)
+            i += 1
+            continue
+        if _is_chord_text_line(line):
+            nxt = lines[i + 1] if i + 1 < len(lines) else None
+            lyric_ok = (
+                nxt is not None
+                and nxt.strip()
+                and "|" not in nxt
+                and not _SECTION_LINE.match(nxt.strip())
+                and not _is_chord_text_line(nxt)
+            )
+            if lyric_ok:
+                out.append(_merge_text(line, nxt))
+                i += 2
+            else:
+                out.append(" ".join(
+                    f"[{t.strip('()')}]" for t in line.split() if _is_chord_token(t)
+                ))
+                i += 1
+            continue
+        out.append(stripped)
+        i += 1
+    return "\n".join(out).strip()

@@ -75,6 +75,15 @@ class ImportChordProReq(BaseModel):
     title: str | None = None
 
 
+class ImportTextReq(BaseModel):
+    title: str
+    artist: Optional[str] = None
+    bpm: Optional[int] = None
+    key: Optional[str] = None
+    capo: Optional[int] = None
+    text: str
+
+
 class PatchSongReq(BaseModel):
     title: Optional[str] = None
     artist: Optional[str] = None
