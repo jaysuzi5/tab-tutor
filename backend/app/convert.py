@@ -3,6 +3,7 @@ import json
 import fitz  # pymupdf
 from openai import AsyncOpenAI
 from .config import get_settings
+from . import align
 
 # PDF -> ChordPro conversion. Prefer the text layer; if the PDF has none
 # (scanned / outlined-font chord sheets, the common case), render the pages and
@@ -85,17 +86,24 @@ async def pdf_to_chordpro(pdf_bytes: bytes) -> dict:
     doc = _open(pdf_bytes)
     try:
         text = extract_text(doc)
+
+        # Text-layer PDF: align deterministically from word coordinates. This is
+        # the accurate path (exact chord placement, no invented chords).
+        if len(text) >= _MIN_TEXT:
+            words = []
+            for page in doc:
+                words.extend(page.get_text("words"))
+            result = align.align(words)
+            if align.chord_count(result["chordpro"]) >= 2:
+                return result
+            # Aligner found ~no chords (odd layout) -> let the LLM try the text.
+            s = get_settings()
+            return await _from_text(text) if s.llm_enabled else result
+
+        # No usable text layer -> image PDF: read rendered pages with vision.
         s = get_settings()
         if not s.llm_enabled:
-            # No Groq key: store whatever text we got (vision needs the LLM).
-            if not text:
-                raise ValueError("no extractable text in PDF (and no Groq key for vision)")
-            return {"title": None, "artist": None, "key": None, "capo": None, "chordpro": text}
-
-        if len(text) >= _MIN_TEXT:
-            return await _from_text(text)
-
-        # No usable text layer -> read the rendered pages with vision.
+            raise ValueError("no extractable text in PDF (and no Groq key for vision)")
         images = render_pages(doc)
         if not images:
             raise ValueError("PDF has no pages")
