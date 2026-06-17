@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     # Model IDs are config, not hardcoded (Groq changes them). Verified current.
     coach_model: str = "llama-3.3-70b-versatile"
     fast_model: str = "llama-3.1-8b-instant"
+    # Multimodal model for reading image-only / scanned chord-sheet PDFs.
+    vision_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     use_fast_model: bool = False  # dev/cheap iteration
 
     # Cost guardrails (spec §9/§11) — configurable per-session cap.
