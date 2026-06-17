@@ -32,6 +32,29 @@ async def import_file(file: UploadFile = File(...)):
         raise HTTPException(415, str(e))
 
 
+@router.post("/import/pdf", response_model=Song)
+async def import_pdf(file: UploadFile = File(...)):
+    data = await file.read()
+    if len(data) > _MAX_UPLOAD:
+        raise HTTPException(413, "file too large")
+    from ..convert import pdf_to_chordpro
+    from ..spotify_app import find_track
+    try:
+        fields = await pdf_to_chordpro(data)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception:
+        raise HTTPException(502, "conversion failed")
+    # Best-effort Spotify match for play-along (non-fatal if it misses).
+    spotify_uri = None
+    title, artist = fields.get("title"), fields.get("artist")
+    if title:
+        track = await find_track(f"{title} {artist or ''}".strip())
+        if track:
+            spotify_uri = track["uri"]
+    return songs.import_converted(fields, spotify_uri)
+
+
 @router.get("/{song_id}/file")
 def get_song_file(song_id: str):
     blob = songs.get_blob(song_id)

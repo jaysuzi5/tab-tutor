@@ -78,15 +78,19 @@ export function usePractice({
     rafRef.current = requestAnimationFrame(loop);
   }, [tl, setExpected, onCursor]);
 
-  const play = useCallback(() => {
-    const m = metroRef.current;
-    m.start(cfgRef.current.tempo, 4);
-    setTiming((onset) => m.timingErrMs(onset));
-    setPlaying(true);
-    setDone(false);
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(loop);
-  }, [loop, setTiming]);
+  const play = useCallback(
+    (countInBeats = 4, muted = false) => {
+      const m = metroRef.current;
+      m.muted = muted;
+      m.start(cfgRef.current.tempo, countInBeats);
+      setTiming((onset) => m.timingErrMs(onset));
+      setPlaying(true);
+      setDone(false);
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(loop);
+    },
+    [loop, setTiming],
+  );
 
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current);

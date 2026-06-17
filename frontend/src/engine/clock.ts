@@ -13,6 +13,7 @@ export class Metronome {
   bpm = 96;
   countInBeats = 4;
   running = false;
+  muted = false; // skip audible clicks (e.g. when playing along to Spotify)
   onBeat: ((musicBeat: number, isCountIn: boolean) => void) | null = null;
 
   get beatMs(): number {
@@ -64,7 +65,7 @@ export class Metronome {
   };
 
   private click(when: number, freq: number, gain: number) {
-    if (!this.ctx) return;
+    if (!this.ctx || this.muted) return;
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     osc.frequency.value = freq;

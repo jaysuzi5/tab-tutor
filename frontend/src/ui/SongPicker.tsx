@@ -3,7 +3,7 @@
 // We never scrape or republish — link-out just opens the user's URL.
 
 import { useRef, useState } from "react";
-import { importChordPro, importFile, type SongMeta } from "../api";
+import { importChordPro, importFile, importPdf, type SongMeta } from "../api";
 
 export function SongPicker({
   songs,
@@ -21,10 +21,12 @@ export function SongPicker({
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handle = async (fn: () => Promise<{ id: string }>) => {
     setErr(null);
+    setBusy(true);
     try {
       const s = await fn();
       onImported(s.id);
@@ -33,6 +35,8 @@ export function SongPicker({
       setTitle("");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "import failed");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -88,6 +92,24 @@ export function SongPicker({
               }}
             />
             <p className="muted small">Renders as real tab with a play-along cursor.</p>
+          </div>
+
+          <div className="import-block">
+            <h4>Upload a chord-sheet PDF</h4>
+            <input
+              type="file"
+              accept=".pdf,application/pdf"
+              disabled={busy}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handle(() => importPdf(f));
+              }}
+            />
+            <p className="muted small">
+              {busy
+                ? "Converting… reading the PDF and matching the Spotify track."
+                : "Any chord-sheet PDF — we convert it to a playable chart and link the Spotify track."}
+            </p>
           </div>
 
           <div className="import-block">

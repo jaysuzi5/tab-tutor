@@ -13,6 +13,7 @@ export interface SongMeta {
   license?: string | null;
   source?: string | null;
   format: string; // chordpro | gp | musicxml
+  spotifyUri?: string | null;
   isBuiltin: boolean;
 }
 
@@ -49,6 +50,14 @@ export async function importFile(file: File): Promise<Song> {
   fd.append("file", file);
   const r = await fetch("/api/songs/import/file", { method: "POST", body: fd });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? "import failed");
+  return r.json();
+}
+
+export async function importPdf(file: File): Promise<Song> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const r = await fetch("/api/songs/import/pdf", { method: "POST", body: fd });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? "PDF import failed");
   return r.json();
 }
 

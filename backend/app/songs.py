@@ -117,6 +117,34 @@ def get_blob(song_id: str) -> bytes | None:
     return REPO.get_blob(song_id)
 
 
+def import_converted(fields: dict, spotify_uri: str | None) -> Song:
+    """Store a ChordPro song produced from a PDF conversion (fields from Groq)."""
+    import uuid
+    import re
+    from .repo import REPO
+    sid = "imp-" + uuid.uuid4().hex[:8]
+    chordpro = fields.get("chordpro", "")
+    # Distinct chords in document order, from the inline [brackets].
+    chords = list(dict.fromkeys(re.findall(r"\[([^\]]+)\]", chordpro)))
+    capo = fields.get("capo")
+    song = Song(
+        id=sid,
+        title=fields.get("title") or "Imported song",
+        artist=fields.get("artist"),
+        key=fields.get("key"),
+        capo=capo if isinstance(capo, int) else None,
+        chords=chords,
+        format="chordpro",
+        isBuiltin=False,
+        source="PDF import",
+        license="user-supplied",
+        spotifyUri=spotify_uri,
+        chordpro=chordpro,
+    )
+    REPO.save_import(song)
+    return song
+
+
 def list_meta() -> list[SongMeta]:
     return [SongMeta(**s.model_dump(exclude={"chordpro"})) for s in all_songs().values()]
 

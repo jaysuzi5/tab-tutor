@@ -62,6 +62,7 @@ class SongMeta(BaseModel):
     license: Optional[str] = None
     source: Optional[str] = None
     format: str = "chordpro"  # chordpro | gp | musicxml
+    spotifyUri: Optional[str] = None  # linked Spotify track for play-along
     isBuiltin: bool = True
 
 

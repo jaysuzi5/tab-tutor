@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMic } from "./engine/useMic";
+import { useSpotify } from "./engine/useSpotify";
 import { PracticePage } from "./pages/PracticePage";
 import { SpeedTrainerPage } from "./pages/SpeedTrainerPage";
 import { StrummingPage } from "./pages/StrummingPage";
@@ -23,6 +24,7 @@ export default function App() {
   // One mic/engine instance for the whole app; pages share it so navigating
   // doesn't restart the mic.
   const mic = useMic();
+  const sp = useSpotify();
   const [view, setView] = useState<View>(viewFromHash);
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function App() {
       ) : view === "strum" ? (
         <StrummingPage mic={mic} />
       ) : (
-        <PracticePage mic={mic} />
+        <PracticePage mic={mic} sp={sp} />
       )}
     </div>
   );

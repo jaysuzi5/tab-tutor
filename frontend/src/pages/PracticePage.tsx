@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { MicApi } from "../engine/useMic";
+import type { SpotifyApi } from "../engine/useSpotify";
 import { usePractice, type Mode } from "../engine/usePractice";
 import { buildTimeline } from "../engine/timeline";
 import { BUILTIN_SONGS } from "../songs";
@@ -22,7 +23,7 @@ const AlphaTabView = lazy(() =>
 
 const FALLBACK = BUILTIN_SONGS[0];
 
-export function PracticePage({ mic }: { mic: MicApi }) {
+export function PracticePage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   const { status, frame, summary, start, setExpected, setTiming, setMode } = mic;
 
   const [songs, setSongs] = useState<SongMeta[]>([]);
@@ -89,6 +90,14 @@ export function PracticePage({ mic }: { mic: MicApi }) {
     [chordpro],
   );
 
+  // Start the linked Spotify track + the autoscroll together (no count-in, muted
+  // metronome since the recording carries the time).
+  const canSpotifyStart = !!song?.spotifyUri && sp.enabled && sp.connected && sp.ready;
+  const syncedStart = async () => {
+    if (song?.spotifyUri) await sp.playUri(song.spotifyUri);
+    practice.play(0, true);
+  };
+
   // Color the current Play-through/Drill chord: orange (play now) -> green
   // (heard correct, latched) -> red (heard a wrong chord, not yet correct).
   const [cursorState, setCursorState] = useState<"pending" | "hit" | "miss" | null>(null);
@@ -138,6 +147,8 @@ export function PracticePage({ mic }: { mic: MicApi }) {
               chords={progression}
               drillStart={drillStart}
               setDrillStart={setDrillStart}
+              spotifyStartAvailable={canSpotifyStart}
+              onSpotifyStart={syncedStart}
             />
             {practice.done && (
               <p className="done-banner">🎉 Reached the end — nice run! Hit Play to go again.</p>
@@ -184,7 +195,7 @@ export function PracticePage({ mic }: { mic: MicApi }) {
           </div>
         )}
 
-        <SpotifyConnect />
+        <SpotifyConnect sp={sp} />
 
         <div className="panel">
           <h3>Tuner</h3>

@@ -22,6 +22,8 @@ export function Transport({
   chords,
   drillStart,
   setDrillStart,
+  spotifyStartAvailable = false,
+  onSpotifyStart,
 }: {
   mode: Mode;
   setMode: (m: Mode) => void;
@@ -35,6 +37,8 @@ export function Transport({
   chords: string[];
   drillStart: number;
   setDrillStart: (i: number) => void;
+  spotifyStartAvailable?: boolean;
+  onSpotifyStart?: () => void;
 }) {
   const pct = Math.round((tempo / songTempo) * 100);
   const clock = mode !== "learn";
@@ -97,7 +101,14 @@ export function Transport({
                 ■ Stop
               </button>
             ) : (
-              <button onClick={onPlay}>▶ Play</button>
+              <>
+                <button onClick={() => onPlay()}>▶ Play (metronome)</button>
+                {spotifyStartAvailable && (
+                  <button className="spotify-start" onClick={() => onSpotifyStart?.()}>
+                    ▶ Start with Spotify
+                  </button>
+                )}
+              </>
             )}
             {countIn > 0 && <span className="countin">{countIn}</span>}
           </div>

@@ -329,6 +329,7 @@ code { background: #11141a; padding: 1px 5px; border-radius: 4px; }
   margin-top: 10px;
 }
 .spotify-now button { margin-top: 0; }
+.spotify-start { background: #1db954; color: #03210f; }
 
 .done-banner {
   background: rgba(74,222,128,0.15); border: 1px solid var(--accent);
