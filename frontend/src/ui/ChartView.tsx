@@ -1,5 +1,5 @@
-// Renders a ChordPro chord sheet (the beginner path). Step 1 = static render;
-// the live cursor/highlight gets wired in step 2 from the PlayEvent stream.
+// Renders a ChordPro chord sheet with a beat-synced cursor + per-chord color
+// feedback. Header metadata + chord chips come from the backend song model.
 
 import { useEffect, useMemo, useRef } from "react";
 import ChordSheetJS from "chordsheetjs";
@@ -7,52 +7,69 @@ import ChordSheetJS from "chordsheetjs";
 export function ChartView({
   chordpro,
   chords,
+  songKey = null,
+  tempo = null,
+  capo = null,
   activeChord = null,
   cursorIndex = -1,
   cursorState = null,
   scrollOnly = false,
+  playing = false,
+  done = false,
+  onChordClick,
 }: {
   chordpro: string;
   chords?: string[]; // authoritative chord list from the backend song model
+  songKey?: string | null;
+  tempo?: number | null;
+  capo?: number | null;
   activeChord?: string | null;
   cursorIndex?: number;
-  cursorState?: "pending" | "hit" | "miss" | null; // color of the current chord
+  cursorState?: "pending" | "hit" | "miss" | null;
   scrollOnly?: boolean; // autoscroll without coloring chords (Spotify play-along)
+  playing?: boolean;
+  done?: boolean;
+  onChordClick?: (chord: string) => void;
 }) {
   const sheetRef = useRef<HTMLDivElement>(null);
+  const userScrolledRef = useRef(false);
+
   const { html, meta } = useMemo(() => {
     const song = new ChordSheetJS.ChordProParser().parse(chordpro);
     const html = new ChordSheetJS.HtmlDivFormatter().format(song);
     return {
       html,
-      meta: {
-        title: song.title,
-        artist: song.artist,
-        key: song.key,
-        tempo: song.metadata.getSingle("tempo"),
-        capo: song.metadata.getSingle("capo"),
-        chords: song.metadata.getSingle("chords"),
-        license: song.metadata.getSingle("license"),
-      },
+      meta: { title: song.title, artist: song.artist, chords: song.metadata.getSingle("chords") },
     };
   }, [chordpro]);
 
-  // Live highlight: light up every chord token on the sheet matching what the
-  // engine currently hears. The beat-synced cursor (one position) is step 4.
+  // Manual scroll cancels auto-scroll so we don't yank the user around. Reset
+  // when a new run starts.
+  useEffect(() => {
+    if (playing) userScrolledRef.current = false;
+  }, [playing]);
+  useEffect(() => {
+    const onUser = () => {
+      if (playing) userScrolledRef.current = true;
+    };
+    window.addEventListener("wheel", onUser, { passive: true });
+    window.addEventListener("touchmove", onUser, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", onUser);
+      window.removeEventListener("touchmove", onUser);
+    };
+  }, [playing]);
+
   useEffect(() => {
     const root = sheetRef.current;
     if (!root) return;
-    // chordsheetjs emits an empty .chord span above lyric syllables that have
-    // no chord. Index only the NON-EMPTY tokens so cursorIndex (from the
-    // timeline of real chords) lines up with the actual chords on the sheet —
-    // otherwise the cursor lands on blanks and never reaches the song's end.
+    // chordsheetjs emits empty .chord spans above lyric syllables with no chord;
+    // index only non-empty tokens so cursorIndex lines up with real chords.
     const tokens = [...root.querySelectorAll<HTMLElement>(".chord")].filter(
       (el) => (el.textContent?.trim() ?? "") !== "",
     );
     tokens.forEach((el, i) => {
       const onCursor = i === cursorIndex;
-      // scrollOnly (Spotify play-along): just autoscroll, no chord coloring —
-      // the highlight drifts out of sync with the recording and distracts.
       const hit = !scrollOnly && !!activeChord && el.textContent?.trim() === activeChord;
       el.classList.toggle("chord-active", hit);
       el.classList.toggle("chord-cursor", !scrollOnly && onCursor);
@@ -60,36 +77,43 @@ export function ChartView({
       el.classList.toggle("cur-hit", !scrollOnly && onCursor && cursorState === "hit");
       el.classList.toggle("cur-miss", !scrollOnly && onCursor && cursorState === "miss");
     });
-    if (cursorIndex >= 0 && tokens[cursorIndex]) {
+    if (cursorIndex >= 0 && tokens[cursorIndex] && !userScrolledRef.current) {
       tokens[cursorIndex].scrollIntoView({ block: "center", behavior: "smooth" });
     }
   }, [activeChord, cursorIndex, cursorState, scrollOnly, html]);
+
+  // Reaching the end: scroll the last lines fully into view.
+  useEffect(() => {
+    if (done && sheetRef.current && !userScrolledRef.current) {
+      const last = sheetRef.current.lastElementChild;
+      last?.scrollIntoView({ block: "end", behavior: "smooth" });
+    }
+  }, [done]);
 
   return (
     <div className="chart">
       <header className="chart-head">
         <h2>{meta.title}</h2>
         <p className="muted">
-          {meta.artist} · key {meta.key} · {meta.tempo} bpm
-          {meta.capo && meta.capo !== "0" ? ` · capo ${meta.capo}` : ""}
+          {meta.artist}
+          {songKey ? ` · key ${songKey}` : ""}
+          {tempo ? ` · ${tempo} bpm` : ""}
+          {capo ? ` · capo ${capo}` : ""}
         </p>
         <p className="chips">
           {(chords ?? (meta.chords ?? "").split(/\s+/)).filter(Boolean).map((c) => (
-            <span
+            <button
               key={c}
               className={`chip ${activeChord === c ? "active" : ""}`}
+              onClick={() => onChordClick?.(c)}
+              title={`Practice ${c} — hear it + see the fingering`}
             >
               {c}
-            </span>
+            </button>
           ))}
         </p>
-        {meta.license && <p className="license">{meta.license}</p>}
       </header>
-      <div
-        ref={sheetRef}
-        className="chordsheet"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <div ref={sheetRef} className="chordsheet" dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 }

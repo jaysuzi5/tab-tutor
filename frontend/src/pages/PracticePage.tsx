@@ -14,6 +14,8 @@ import { TutorPanel } from "../ui/TutorPanel";
 import { Transport } from "../ui/Transport";
 import { SongPicker } from "../ui/SongPicker";
 import { SpotifyConnect } from "../ui/SpotifyConnect";
+import { ChordDiagram } from "../ui/ChordDiagram";
+import { playChord } from "../engine/chordAudio";
 import { useTutor } from "../engine/useTutor";
 
 // alphaTab is heavy (~1.2MB); only load it when a tab/score song is opened.
@@ -34,6 +36,12 @@ export function PracticePage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   const [tempo, setTempo] = useState(96);
   const [drillStart, setDrillStart] = useState(0);
   const [cursorIndex, setCursorIndex] = useState(-1);
+  const [practiceChord, setPracticeChord] = useState<string | null>(null);
+
+  const onChordClick = (c: string) => {
+    setPracticeChord(c);
+    playChord(c); // hear a reference strum
+  };
 
   const refreshList = (selectId?: string) =>
     listSongs()
@@ -171,10 +179,16 @@ export function PracticePage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
             <ChartView
               chordpro={chordpro}
               chords={chords}
+              songKey={song?.key}
+              tempo={song?.tempo}
+              capo={song?.capo}
               activeChord={mode === "playthrough" || mode === "drill" ? null : activeChord}
               cursorIndex={cursorIndex}
               cursorState={cursorState}
               scrollOnly={spotifyMode}
+              playing={practice.playing}
+              done={practice.done}
+              onChordClick={onChordClick}
             />
           </>
         )}
@@ -191,6 +205,28 @@ export function PracticePage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
             onAsk={tutor.ask}
           />
         </div>
+
+        {practiceChord && (
+          <div className="panel">
+            <div className="practice-chord-head">
+              <h3>Chord: {practiceChord}</h3>
+              <button className="ghost" onClick={() => setPracticeChord(null)}>×</button>
+            </div>
+            <div className="practice-chord-body">
+              <ChordDiagram chord={practiceChord} />
+              <div className="practice-chord-actions">
+                <button onClick={() => playChord(practiceChord)}>▶ Hear it</button>
+                {running && (
+                  <p className={`muted small ${frame?.live.chord === practiceChord ? "ok" : ""}`}>
+                    {frame?.live.chord === practiceChord
+                      ? "✓ that's it!"
+                      : "strum it — I'll confirm"}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {running && (
           <div className="panel">

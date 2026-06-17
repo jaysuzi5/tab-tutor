@@ -199,22 +199,34 @@ def _is_chord_text_line(line: str) -> bool:
 
 
 def _merge_text(chord_line: str, lyric: str) -> str:
-    """Insert each chord into the lyric at the chord token's character column."""
-    res, pos = "", 0
-    for m in re.finditer(r"\S+", chord_line):
-        col, tok = m.start(), m.group().strip("()")
-        if not _is_chord_token(tok):
+    """Place each chord before the WORD beneath it (chord above the whole word —
+    we don't split words mid-letter). Words stay intact so the lyric line keeps
+    a single baseline."""
+    words = [(m.start(), m.end(), m.group()) for m in re.finditer(r"\S+", lyric)]
+    chords = [
+        (m.start(), m.group().strip("()"))
+        for m in re.finditer(r"\S+", chord_line)
+        if _is_chord_token(m.group().strip("()"))
+    ]
+    if not words:
+        return " ".join(f"[{c}]" for _, c in chords)
+    pre: dict[int, list[str]] = {}
+    for col, ch in chords:
+        if col > words[-1][1]:  # chord past the last word -> trailing
+            pre.setdefault(len(words), []).append(ch)
             continue
-        if pos < col:
-            if col <= len(lyric):
-                res += lyric[pos:col]
-            else:
-                res += lyric[pos:] + " "
-            pos = min(col, len(lyric)) if col <= len(lyric) else len(lyric)
-        res += f"[{tok}]"
-    if pos < len(lyric):
-        res += lyric[pos:]
-    return res.rstrip()
+        best, bestd = 0, None
+        for idx, (s, e, _) in enumerate(words):
+            d = 0 if s <= col <= e else min(abs(col - s), abs(col - e))
+            if bestd is None or d < bestd:
+                bestd, best = d, idx
+        pre.setdefault(best, []).append(ch)
+    out: list[str] = []
+    for idx, (_s, _e, w) in enumerate(words):
+        out.extend(f"[{c}]" for c in pre.get(idx, []))
+        out.append(w)
+    out.extend(f"[{c}]" for c in pre.get(len(words), []))
+    return " ".join(out)
 
 
 def parse_spacetext(raw: str) -> str:
