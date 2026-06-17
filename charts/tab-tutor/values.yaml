@@ -1,6 +1,6 @@
 image:
   repository: jaysuzi5/tab-tutor
-  tag: "0.1.9"
+  tag: "0.1.10"
   pullPolicy: IfNotPresent
 
 replicaCount: 1
@@ -35,7 +35,7 @@ config:
   useFastModel: false
   maxTokensPerSession: 20000
   maxOutputTokens: 400
-  spotifyEnabled: false
+  spotifyEnabled: true
   spotifyRedirectUri: "https://tab-tutor.jaycurtis.org/api/spotify/callback"
 
 # Secrets come from a SealedSecret named `tab-tutor-secrets` (GROQ_API_KEY,
