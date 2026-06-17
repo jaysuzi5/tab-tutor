@@ -75,6 +75,9 @@ export function PracticePage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
     setMode(mode, mode === "learn" ? null : tempo);
   }, [mode, tempo, setMode]);
 
+  // Spotify play-along run: autoscroll only (no chord coloring) + pause the
+  // track when transport stops.
+  const [spotifyMode, setSpotifyMode] = useState(false);
   const practice = usePractice({
     chordpro,
     tempo,
@@ -83,6 +86,7 @@ export function PracticePage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
     setExpected,
     setTiming,
     onCursor: setCursorIndex,
+    onStop: () => sp.pause(),
   });
 
   const progression = useMemo(
@@ -90,12 +94,23 @@ export function PracticePage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
     [chordpro],
   );
 
-  // Start the linked Spotify track + the autoscroll together (no count-in, muted
-  // metronome since the recording carries the time).
   const canSpotifyStart = !!song?.spotifyUri && sp.enabled && sp.connected && sp.ready;
-  const syncedStart = async () => {
-    if (song?.spotifyUri) await sp.playUri(song.spotifyUri);
-    practice.play(0, true);
+
+  // Plain metronome run: 4-count, then scroll + per-chord coloring.
+  const normalStart = () => {
+    setSpotifyMode(false);
+    practice.play();
+  };
+  // Spotify run: 4-count (audible clicks), then the track starts AND the scroll
+  // begins together; metronome muted after the count, no chord coloring.
+  const syncedStart = () => {
+    setSpotifyMode(true);
+    practice.play({
+      muteAfterCountIn: true,
+      onMusicStart: () => {
+        if (song?.spotifyUri) sp.playUri(song.spotifyUri);
+      },
+    });
   };
 
   // Color the current Play-through/Drill chord: orange (play now) -> green
@@ -142,7 +157,7 @@ export function PracticePage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
               songTempo={songTempo}
               playing={practice.playing}
               countIn={practice.countIn}
-              onPlay={practice.play}
+              onPlay={normalStart}
               onStop={practice.stop}
               chords={progression}
               drillStart={drillStart}
@@ -159,6 +174,7 @@ export function PracticePage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
               activeChord={mode === "playthrough" || mode === "drill" ? null : activeChord}
               cursorIndex={cursorIndex}
               cursorState={cursorState}
+              scrollOnly={spotifyMode}
             />
           </>
         )}

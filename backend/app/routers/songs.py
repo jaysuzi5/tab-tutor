@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import Response
-from ..models import Song, SongMeta, ImportChordProReq
+from ..models import Song, SongMeta, ImportChordProReq, PatchSongReq
 from .. import songs
 
 router = APIRouter(prefix="/api/songs", tags=["songs"])
@@ -70,3 +70,24 @@ def get_song(song_id: str):
     if not s:
         raise HTTPException(404, "song not found")
     return s
+
+
+@router.patch("/{song_id}", response_model=Song)
+def edit_song(song_id: str, req: PatchSongReq):
+    existing = songs.get_song(song_id)
+    if not existing:
+        raise HTTPException(404, "song not found")
+    if existing.isBuiltin:
+        raise HTTPException(403, "built-in songs can't be edited")
+    return songs.update_song(song_id, req.model_dump(exclude_unset=True))
+
+
+@router.delete("/{song_id}")
+def delete_song(song_id: str):
+    existing = songs.get_song(song_id)
+    if not existing:
+        raise HTTPException(404, "song not found")
+    if existing.isBuiltin:
+        raise HTTPException(403, "built-in songs can't be deleted")
+    songs.delete_song(song_id)
+    return {"ok": True}

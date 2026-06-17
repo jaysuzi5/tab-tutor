@@ -61,6 +61,28 @@ export async function importPdf(file: File): Promise<Song> {
   return r.json();
 }
 
+export interface SongPatch {
+  title?: string;
+  artist?: string;
+  chordpro?: string;
+  spotifyUri?: string;
+}
+
+export async function updateSong(id: string, patch: SongPatch): Promise<Song> {
+  const r = await fetch(`/api/songs/${id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!r.ok) throw new Error("update failed");
+  return r.json();
+}
+
+export async function deleteSong(id: string): Promise<void> {
+  const r = await fetch(`/api/songs/${id}`, { method: "DELETE" });
+  if (!r.ok) throw new Error("delete failed");
+}
+
 export const songFileUrl = (id: string) => `/api/songs/${id}/file`;
 
 export interface CoachChunk {

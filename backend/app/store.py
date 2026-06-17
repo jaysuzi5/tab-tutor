@@ -72,3 +72,10 @@ class MemoryRepo:
 
     def get_blob(self, song_id: str) -> bytes | None:
         return self._blobs.get(song_id)
+
+    def update_import(self, song: Song) -> None:
+        self._imports[song.id] = song
+
+    def delete_import(self, song_id: str) -> None:
+        self._imports.pop(song_id, None)
+        self._blobs.pop(song_id, None)

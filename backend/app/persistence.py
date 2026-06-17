@@ -157,3 +157,16 @@ class PgRepo:
         with self.pool.connection() as conn:
             row = conn.execute("SELECT blob FROM songs WHERE id=%s", (song_id,)).fetchone()
         return bytes(row[0]) if row and row[0] is not None else None
+
+    def update_import(self, song: Song) -> None:
+        with self.pool.connection() as conn:
+            conn.execute(
+                "UPDATE songs SET title=%s, artist=%s, key=%s, capo=%s, chords=%s::jsonb, "
+                "chordpro=%s, spotify_uri=%s WHERE id=%s AND is_builtin=false",
+                (song.title, song.artist, song.key, song.capo, json.dumps(song.chords),
+                 song.chordpro, song.spotifyUri, song.id),
+            )
+
+    def delete_import(self, song_id: str) -> None:
+        with self.pool.connection() as conn:
+            conn.execute("DELETE FROM songs WHERE id=%s AND is_builtin=false", (song_id,))

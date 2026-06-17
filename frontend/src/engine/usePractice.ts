@@ -16,6 +16,7 @@ export function usePractice({
   setExpected,
   setTiming,
   onCursor,
+  onStop,
 }: {
   chordpro: string;
   tempo: number;
@@ -24,6 +25,7 @@ export function usePractice({
   setExpected: (c: string | null) => void;
   setTiming: (fn: ((onsetMs: number) => number | null) | null) => void;
   onCursor: (idx: number) => void;
+  onStop?: () => void; // fired on stop AND end-of-song (e.g. pause Spotify)
 }) {
   const tl = useMemo(() => buildTimeline(chordpro), [chordpro]);
   const metroRef = useRef<Metronome>(new Metronome());
@@ -34,6 +36,15 @@ export function usePractice({
 
   const cfgRef = useRef({ tempo, mode, drillStart });
   cfgRef.current = { tempo, mode, drillStart };
+
+  const onStopRef = useRef(onStop);
+  onStopRef.current = onStop;
+
+  // Fired once when the count-in ends and music begins (start the backing track
+  // here so the song + autoscroll begin together, after the 4-count).
+  const onMusicStartRef = useRef<(() => void) | null>(null);
+  const muteAfterCountInRef = useRef(false);
+  const musicStartedRef = useRef(false);
 
   // Called when Play-through reaches the last chord: stop transport but leave
   // the cursor on the final chord. Kept in a ref so the loop's deps stay stable.
@@ -46,6 +57,7 @@ export function usePractice({
     setPlaying(false);
     setCountIn(0);
     setDone(true);
+    onStopRef.current?.();
   };
 
   const loop = useCallback(() => {
@@ -56,6 +68,11 @@ export function usePractice({
       setExpected(null);
       onCursor(-1);
     } else {
+      if (!musicStartedRef.current) {
+        musicStartedRef.current = true;
+        if (muteAfterCountInRef.current) m.muted = true;
+        onMusicStartRef.current?.(); // e.g. start the Spotify track now
+      }
       setCountIn(0);
       const beat = m.currentMusicBeat(now);
       const { mode, drillStart } = cfgRef.current;
@@ -79,10 +96,15 @@ export function usePractice({
   }, [tl, setExpected, onCursor]);
 
   const play = useCallback(
-    (countInBeats = 4, muted = false) => {
+    (opts?: { onMusicStart?: () => void; muteAfterCountIn?: boolean }) => {
       const m = metroRef.current;
-      m.muted = muted;
-      m.start(cfgRef.current.tempo, countInBeats);
+      // Always a 4-beat count-in; clicks audible during it. For Spotify runs we
+      // mute the clicks once the track starts (the recording carries the time).
+      m.muted = false;
+      onMusicStartRef.current = opts?.onMusicStart ?? null;
+      muteAfterCountInRef.current = opts?.muteAfterCountIn ?? false;
+      musicStartedRef.current = false;
+      m.start(cfgRef.current.tempo, 4);
       setTiming((onset) => m.timingErrMs(onset));
       setPlaying(true);
       setDone(false);
@@ -101,6 +123,7 @@ export function usePractice({
     setPlaying(false);
     setCountIn(0);
     setDone(false);
+    onStopRef.current?.(); // stop the backing track too
   }, [setTiming, setExpected, onCursor]);
 
   // Tempo change while playing re-anchors the grid (restart with count-in).

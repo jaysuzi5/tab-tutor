@@ -265,6 +265,9 @@ code { background: #11141a; padding: 1px 5px; border-radius: 4px; }
   border: 1px solid #262b33; border-radius: 8px; padding: 9px 10px; font-size: 14px;
 }
 .songpicker-row button { margin-top: 0; }
+.songpicker-row button.danger { background: #ef4444; color: #fff; }
+.edit-actions { display: flex; gap: 8px; }
+button.ghost { background: var(--chip); color: var(--ink); }
 .import-panel {
   background: var(--panel); border: 1px solid #262b33; border-radius: 12px;
   padding: 14px 16px; margin-top: 10px; display: grid; gap: 16px;

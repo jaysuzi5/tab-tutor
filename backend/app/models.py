@@ -73,3 +73,10 @@ class Song(SongMeta):
 class ImportChordProReq(BaseModel):
     text: str
     title: str | None = None
+
+
+class PatchSongReq(BaseModel):
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    chordpro: Optional[str] = None
+    spotifyUri: Optional[str] = None

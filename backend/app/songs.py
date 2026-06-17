@@ -117,6 +117,38 @@ def get_blob(song_id: str) -> bytes | None:
     return REPO.get_blob(song_id)
 
 
+def _chords_from_chordpro(chordpro: str) -> list[str]:
+    import re
+    return list(dict.fromkeys(re.findall(r"\[([^\]]+)\]", chordpro)))
+
+
+def delete_song(song_id: str) -> bool:
+    from .repo import REPO
+    s = get_song(song_id)
+    if not s or s.isBuiltin:
+        return False
+    REPO.delete_import(song_id)
+    return True
+
+
+def update_song(song_id: str, patch: dict) -> Song | None:
+    from .repo import REPO
+    s = get_song(song_id)
+    if not s or s.isBuiltin:
+        return None
+    if patch.get("title") is not None:
+        s.title = patch["title"]
+    if patch.get("artist") is not None:
+        s.artist = patch["artist"]
+    if patch.get("spotifyUri") is not None:
+        s.spotifyUri = patch["spotifyUri"] or None
+    if patch.get("chordpro") is not None:
+        s.chordpro = patch["chordpro"]
+        s.chords = _chords_from_chordpro(s.chordpro)
+    REPO.update_import(s)
+    return s
+
+
 def import_converted(fields: dict, spotify_uri: str | None) -> Song:
     """Store a ChordPro song produced from a PDF conversion (fields from Groq)."""
     import uuid
