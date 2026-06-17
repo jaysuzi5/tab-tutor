@@ -1,12 +1,13 @@
 import re
+from statistics import median
 
-# Deterministic chord-sheet aligner. Chord sheets put chords on a line ABOVE the
-# lyric, positioned horizontally over the syllable where the change happens. We
-# use each word's x-coordinate (from pymupdf) to place [chords] over the lyric
-# word beneath them — exact placement, exactly one bracket per chord token, no
-# LLM guessing (which clumped chords and invented extras).
+# Deterministic chord-sheet aligner driven by word coordinates (pymupdf).
+# Rows are grouped by Y (PDFs often emit each token as its own block, so block/
+# line indices are unreliable). Each row is rendered to a monospace-style string
+# using estimated character columns, then a chord row is merged into the lyric
+# row below it at exact columns — this handles closely-spaced chords and never
+# invents chords or breaks lines.
 
-# A chord token: root + optional quality/extensions + optional slash bass.
 CHORD_RE = re.compile(
     r"^[A-G][#b]?(?:maj|min|m|dim|aug|sus|add|M|\+|°|ø)*\d*(?:sus\d|add\d)?(?:/[A-G][#b]?)?$"
 )
@@ -17,121 +18,157 @@ SECTION_RE = re.compile(
 CAPO_RE = re.compile(r"capo\s*:?\s*(\d{1,2})", re.I)
 KEY_RE = re.compile(r"\bkey\s*:?\s*([A-G][#b]?m?)\b", re.I)
 
-# pymupdf get_text("words") tuple indices.
-X0, Y0, TEXT, BLOCK, LINE = 0, 1, 4, 5, 6
+X0, Y0, X1, Y1, TEXT = 0, 1, 2, 3, 4
 
 
-def _lines(words: list) -> list[list[tuple[float, str]]]:
-    """Group words into visual lines (by block+line), ordered top→bottom."""
-    groups: dict[tuple, list] = {}
-    for w in words:
-        groups.setdefault((w[BLOCK], w[LINE]), []).append(w)
-    lines = []
-    for ws in groups.values():
-        ws.sort(key=lambda w: w[X0])
-        y = min(w[Y0] for w in ws)
-        lines.append((y, [(w[X0], w[TEXT]) for w in ws if w[TEXT].strip()]))
-    lines.sort(key=lambda t: t[0])
-    return [toks for _, toks in lines if toks]
+def _col(x: float, left: float, char_w: float) -> int:
+    return max(0, round((x - left) / char_w))
 
 
-def _is_chord_line(toks: list[tuple[float, str]]) -> bool:
-    if not toks or len(toks) > 14:
+def _render(toks, left, char_w) -> str:
+    """Lay tokens out at their character columns (monospace approximation)."""
+    s = ""
+    for x0, _x1, text in toks:
+        c = _col(x0, left, char_w)
+        if len(s) < c:
+            s += " " * (c - len(s))
+        elif s and not s.endswith(" "):
+            s += " "  # avoid clobbering an overlapping previous token
+        s += text
+    return s
+
+
+def _group_rows(words: list) -> list[list[tuple[float, float, str]]]:
+    items = [(w[X0], w[X1], w[Y0], w[Y1], w[TEXT]) for w in words if w[TEXT].strip()]
+    if not items:
+        return []
+    h = median([it[3] - it[2] for it in items]) or 10  # glyph height
+    tol = h * 0.6
+    items.sort(key=lambda it: (it[2], it[0]))  # by y, then x
+    rows: list[list] = []
+    cur: list = []
+    cur_y = None
+    for x0, x1, y0, _y1, text in items:
+        if cur_y is None or abs(y0 - cur_y) <= tol:
+            cur.append((x0, x1, text))
+            cur_y = y0 if cur_y is None else (cur_y + y0) / 2
+        else:
+            rows.append(sorted(cur, key=lambda t: t[0]))
+            cur = [(x0, x1, text)]
+            cur_y = y0
+    if cur:
+        rows.append(sorted(cur, key=lambda t: t[0]))
+    return rows
+
+
+def _char_width(words: list) -> float:
+    widths = [
+        (w[X1] - w[X0]) / len(w[TEXT])
+        for w in words
+        if w[TEXT].strip() and len(w[TEXT]) >= 2
+    ]
+    return median(widths) if widths else 6.0
+
+
+def _is_chord_toks(toks) -> bool:
+    if not toks or len(toks) > 16:
         return False
-    hits = sum(1 for _, t in toks if CHORD_RE.match(t))
+    hits = sum(1 for _, _, t in toks if CHORD_RE.match(t))
     return hits / len(toks) >= 0.6
 
 
-def _is_section(toks: list[tuple[float, str]]) -> str | None:
-    text = " ".join(t for _, t in toks).strip(" []")
-    if len(toks) <= 5 and SECTION_RE.search(text):
-        return text
+def _section(text: str) -> str | None:
+    t = text.strip().strip("[]")
+    if len(t) <= 22 and SECTION_RE.search(t):
+        return t
     return None
 
 
-def _merge(chords: list[tuple[float, str]], lyrics: list[tuple[float, str]]) -> str:
-    """Put each chord before the lyric word whose x is nearest the chord's x."""
-    if not lyrics:
-        return " ".join(f"[{c}]" for _, c in chords)
-    prefix: dict[int, list[str]] = {}
-    for cx, c in chords:
-        best, bestd = 0, float("inf")
-        for i, (lx, _) in enumerate(lyrics):
-            d = abs(lx - cx)
-            if d < bestd:
-                bestd, best = d, i
-        # chord sitting past the last word -> attach to end of line
-        if cx > lyrics[-1][0] + 8:
-            best = len(lyrics)
-        prefix.setdefault(best, []).append(c)
-    out = []
-    for i, (_, word) in enumerate(lyrics):
-        for c in prefix.get(i, []):
-            out.append(f"[{c}]")
-        out.append(word)
-    for c in prefix.get(len(lyrics), []):
-        out.append(f"[{c}]")
-    return " ".join(out)
+def _merge(chord_toks, left, char_w, lyric: str) -> str:
+    """Insert each chord into the lyric string at the chord's character column."""
+    cols = sorted((_col(x0, left, char_w), t) for x0, _x1, t in chord_toks)
+    res = ""
+    pos = 0
+    for col, ch in cols:
+        if pos < col:
+            if col <= len(lyric):
+                res += lyric[pos:col]
+                pos = col
+            else:
+                res += lyric[pos:]
+                res += " "  # chord past the end of the lyric
+                pos = len(lyric)
+        res += f"[{ch}]"
+    if pos < len(lyric):
+        res += lyric[pos:]
+    return res.rstrip()
 
 
 def align(words: list) -> dict:
-    lines = _lines(words)
+    char_w = _char_width(words)
+    rows_raw = _group_rows(words)
+    left = min((t[0] for r in rows_raw for t in r), default=0.0)
+    rows = [[(x0, x1, txt) for x0, x1, txt in r] for r in rows_raw]
+    texts = [_render(r, left, char_w) for r in rows]
+
     out: list[str] = []
     title = artist = key = None
     capo = None
     seen_body = False
     i = 0
-    while i < len(lines):
-        toks = lines[i]
-        text = " ".join(t for _, t in toks).strip()
+    while i < len(rows):
+        toks, text = rows[i], texts[i].strip()
+        if not text:
+            i += 1
+            continue
 
         if capo is None and (m := CAPO_RE.search(text)):
             capo = int(m.group(1))
         if key is None and (m := KEY_RE.search(text)):
             key = m.group(1)
-        # Drop standalone capo/key/tuning directive lines from the body (already
-        # captured as metadata).
         low = text.lower()
-        if low[:4] in ("capo", "key:", "key ", "tuni") or low.startswith("key"):
+        if low.startswith("capo") or low.startswith("key") or low.startswith("tuning"):
             i += 1
             continue
 
-        section = _is_section(toks)
-        if section:
-            out.append(f"{{comment: {section}}}")
+        sec = _section(text)
+        if sec:
+            out.append(f"{{comment: {sec}}}")
             seen_body = True
             i += 1
             continue
 
-        if _is_chord_line(toks):
-            nxt = lines[i + 1] if i + 1 < len(lines) else None
-            if nxt and not _is_chord_line(nxt) and not _is_section(nxt):
-                out.append(_merge(toks, nxt))
+        if _is_chord_toks(toks):
+            nxt = rows[i + 1] if i + 1 < len(rows) else None
+            if nxt and not _is_chord_toks(nxt) and not _section(texts[i + 1].strip()):
+                out.append(_merge(toks, left, char_w, texts[i + 1]))
                 i += 2
             else:
-                out.append(" ".join(f"[{c}]" for _, c in toks))
+                out.append(" ".join(f"[{t}]" for _, _, t in toks))
                 i += 1
             seen_body = True
             continue
 
-        # Plain text line. Before the body starts, treat the first couple of
-        # lines as title / artist metadata.
-        if not seen_body and text:
-            if title is None and not CAPO_RE.search(text) and not KEY_RE.search(text):
+        if not seen_body:
+            if title is None:
                 title = text
                 i += 1
                 continue
-            if artist is None and not CAPO_RE.search(text) and not KEY_RE.search(text):
+            if artist is None:
                 artist = text
                 i += 1
                 continue
-        if text:
-            out.append(text)
-            seen_body = True
+        out.append(text)
+        seen_body = True
         i += 1
 
-    chordpro = "\n".join(out).strip()
-    return {"title": title, "artist": artist, "key": key, "capo": capo, "chordpro": chordpro}
+    return {
+        "title": title,
+        "artist": artist,
+        "key": key,
+        "capo": capo,
+        "chordpro": "\n".join(out).strip(),
+    }
 
 
 def chord_count(chordpro: str) -> int:
