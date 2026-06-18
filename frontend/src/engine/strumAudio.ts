@@ -13,7 +13,7 @@ export function playStrum(p: StrumPattern, songBpm = 80) {
   const per = p.subdivision === "triplet" ? 3 : 2; // slots per beat
   const slotDur = 60 / bpm / per;
   const now = ctx.currentTime + 0.06;
-  const bars = 2;
+  const bars = p.slots.length > 4 * per ? 1 : 2; // multi-bar once, single bar twice
   for (let b = 0; b < bars; b++) {
     p.slots.forEach((s, i) => {
       if (!s) return;

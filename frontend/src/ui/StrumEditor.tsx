@@ -6,7 +6,9 @@ import type { StrumPattern } from "../api";
 import { playStrum } from "../engine/strumAudio";
 
 const ARROW = (s: string) => (s === "D" ? "↓" : s === "U" ? "↑" : "·");
-const newSlots = (sub: string) => Array(sub === "triplet" ? 12 : 8).fill("D");
+const perOf = (sub: string) => (sub === "triplet" ? 3 : 2);
+const perBar = (sub: string) => 4 * perOf(sub); // 4 beats/bar
+const newSlots = (sub: string, bars = 1) => Array(perBar(sub) * bars).fill("D");
 
 export function StrumEditor({
   value,
@@ -47,19 +49,41 @@ export function StrumEditor({
             />
             <select
               value={p.subdivision}
-              onChange={(e) =>
-                setRow(i, { subdivision: e.target.value as StrumPattern["subdivision"], slots: newSlots(e.target.value) })
-              }
+              onChange={(e) => {
+                const bars = Math.max(1, Math.round(p.slots.length / perBar(p.subdivision)));
+                setRow(i, {
+                  subdivision: e.target.value as StrumPattern["subdivision"],
+                  slots: newSlots(e.target.value, bars),
+                });
+              }}
             >
               <option value="eighth">8ths</option>
               <option value="triplet">Triplets</option>
             </select>
+            <span className="se-bars">
+              <button
+                className="ghost"
+                title="remove a bar"
+                disabled={p.slots.length <= perBar(p.subdivision)}
+                onClick={() => setRow(i, { slots: p.slots.slice(0, -perBar(p.subdivision)) })}
+              >−bar</button>
+              <button
+                className="ghost"
+                title="add a bar"
+                onClick={() => setRow(i, { slots: [...p.slots, ...Array(perBar(p.subdivision)).fill("")] })}
+              >+bar</button>
+            </span>
             <button className="ghost" onClick={() => playStrum(p, defaultBpm)}>▶</button>
             <button className="ghost" onClick={() => onChange(value.filter((_, idx) => idx !== i))}>×</button>
           </div>
           <div className="se-grid">
             {p.slots.map((s, slot) => (
-              <button key={slot} className={`se-slot ${s === "" ? "rest" : ""}`} onClick={() => cycle(i, slot)}>
+              <button
+                key={slot}
+                className={`se-slot ${s === "" ? "rest" : ""}`}
+                style={slot > 0 && slot % perBar(p.subdivision) === 0 ? { marginLeft: 14 } : undefined}
+                onClick={() => cycle(i, slot)}
+              >
                 {ARROW(s)}
               </button>
             ))}

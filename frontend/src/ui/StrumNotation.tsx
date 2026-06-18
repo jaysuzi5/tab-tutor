@@ -15,9 +15,16 @@ export function StrumNotation({
   onPlay?: () => void;
 }) {
   const per = pattern.subdivision === "triplet" ? 3 : 2;
+  const beatsPerBar = 4;
+  const perBar = beatsPerBar * per;
   const slots = pattern.slots;
-  const label = (i: number) =>
-    per === 2 ? (i % 2 === 0 ? String(i / 2 + 1) : "&") : i % 3 === 0 ? String(i / 3 + 1) : "";
+  // Beat numbers restart each bar (1..4); eighths get "&" on the off-beats.
+  const label = (i: number) => {
+    const beat = Math.floor(i / per);
+    const n = String((beat % beatsPerBar) + 1);
+    return per === 2 ? (i % 2 === 0 ? n : "&") : i % 3 === 0 ? n : "";
+  };
+  const barGap = (i: number) => (i > 0 && i % perBar === 0 ? { marginLeft: 14 } : undefined);
 
   const groups: number[] = [];
   for (let i = 0; i < slots.length; i += per) groups.push(i);
@@ -32,12 +39,12 @@ export function StrumNotation({
       <div className="sn-rows">
         <div className="sn-row">
           {slots.map((s, i) => (
-            <div key={i} className="sn-cell sn-arrow">{ARROW(s)}</div>
+            <div key={i} className="sn-cell sn-arrow" style={barGap(i)}>{ARROW(s)}</div>
           ))}
         </div>
         <div className="sn-row">
           {slots.map((_, i) => (
-            <div key={i} className="sn-cell sn-label">{label(i)}</div>
+            <div key={i} className="sn-cell sn-label" style={barGap(i)}>{label(i)}</div>
           ))}
         </div>
         <div className="sn-row sn-beams">
@@ -45,7 +52,7 @@ export function StrumNotation({
             <div
               key={g}
               className={`sn-beam ${pattern.subdivision}`}
-              style={{ width: per * 28 }}
+              style={{ width: per * 28, ...barGap(g) }}
             >
               {pattern.subdivision === "triplet" && <span>3</span>}
             </div>

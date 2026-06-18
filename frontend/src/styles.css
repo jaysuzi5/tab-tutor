@@ -199,6 +199,8 @@ body {
 .se-head .se-bpm { flex: 0 0 64px; }
 .se-head select { background: #11141a; color: var(--ink); border: 1px solid #262b33; border-radius: 8px; padding: 7px; }
 .se-head button { margin-top: 0; padding: 4px 10px; }
+.se-bars { display: inline-flex; gap: 4px; }
+.se-bars button { font-size: 12px; padding: 4px 6px; }
 .se-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 .se-slot {
   margin: 0; width: 30px; height: 34px; padding: 0; background: var(--chip); color: var(--ink);
