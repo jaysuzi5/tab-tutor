@@ -63,6 +63,17 @@ export function StrumEditor({
             <span className="se-bars">
               <button
                 className="ghost"
+                title="remove the last note"
+                disabled={p.slots.length <= 1}
+                onClick={() => setRow(i, { slots: p.slots.slice(0, -1) })}
+              >−note</button>
+              <button
+                className="ghost"
+                title="add a note"
+                onClick={() => setRow(i, { slots: [...p.slots, "D"] })}
+              >+note</button>
+              <button
+                className="ghost"
                 title="remove a bar"
                 disabled={p.slots.length <= perBar(p.subdivision)}
                 onClick={() => setRow(i, { slots: p.slots.slice(0, -perBar(p.subdivision)) })}

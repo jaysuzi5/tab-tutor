@@ -48,15 +48,18 @@ export function StrumNotation({
           ))}
         </div>
         <div className="sn-row sn-beams">
-          {groups.map((g) => (
-            <div
-              key={g}
-              className={`sn-beam ${pattern.subdivision}`}
-              style={{ width: per * 28, ...barGap(g) }}
-            >
-              {pattern.subdivision === "triplet" && <span>3</span>}
-            </div>
-          ))}
+          {groups.map((g) => {
+            const n = Math.min(per, slots.length - g);
+            return (
+              <div
+                key={g}
+                className={`sn-beam ${pattern.subdivision}`}
+                style={{ width: n * 28, ...barGap(g) }}
+              >
+                {pattern.subdivision === "triplet" && n === 3 && <span>3</span>}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
