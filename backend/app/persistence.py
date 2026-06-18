@@ -165,9 +165,9 @@ class PgRepo:
     def update_import(self, song: Song) -> None:
         with self.pool.connection() as conn:
             conn.execute(
-                "UPDATE songs SET title=%s, artist=%s, key=%s, capo=%s, chords=%s::jsonb, "
+                "UPDATE songs SET title=%s, artist=%s, key=%s, tempo=%s, capo=%s, chords=%s::jsonb, "
                 "chordpro=%s, spotify_uri=%s, strumming=%s::jsonb WHERE id=%s AND is_builtin=false",
-                (song.title, song.artist, song.key, song.capo, json.dumps(song.chords),
+                (song.title, song.artist, song.key, song.tempo, song.capo, json.dumps(song.chords),
                  song.chordpro, song.spotifyUri,
                  json.dumps([s.model_dump() for s in song.strumming]), song.id),
             )

@@ -40,7 +40,9 @@ export function SongPicker({
   const [eSpotify, setESpotify] = useState("");
   const [eChordpro, setEChordpro] = useState("");
   const [eStrums, setEStrums] = useState<StrumPattern[]>([]);
-  const [eTempo, setETempo] = useState(80);
+  const [eBpm, setEBpm] = useState(80);
+  const [eKey, setEKey] = useState("");
+  const [eCapo, setECapo] = useState(0);
   const [eQuery, setEQuery] = useState("");
   const [eResults, setEResults] = useState<SpotifyTrack[]>([]);
 
@@ -59,7 +61,9 @@ export function SongPicker({
       setESpotify(full.spotifyUri ?? "");
       setEChordpro(full.chordpro ?? "");
       setEStrums(full.strumming ?? []);
-      setETempo(full.tempo ?? 80);
+      setEBpm(full.tempo ?? 80);
+      setEKey(full.key ?? "");
+      setECapo(full.capo ?? 0);
       setEQuery(`${full.title ?? ""} ${full.artist ?? ""}`.trim());
       setEResults([]);
       setOpen(false);
@@ -79,7 +83,8 @@ export function SongPicker({
     setErr(null);
     try {
       await updateSong(selectedId, {
-        title: eTitle, artist: eArtist, spotifyUri: eSpotify, chordpro: eChordpro,
+        title: eTitle, artist: eArtist, bpm: eBpm, key: eKey, capo: eCapo,
+        spotifyUri: eSpotify, chordpro: eChordpro,
         strumming: eStrums.filter((s) => s.slots && s.slots.length > 0),
       });
       setEditing(false);
@@ -148,6 +153,23 @@ export function SongPicker({
             <h4>Edit song</h4>
             <input placeholder="Title" value={eTitle} onChange={(e) => setETitle(e.target.value)} />
             <input placeholder="Artist" value={eArtist} onChange={(e) => setEArtist(e.target.value)} />
+            <div className="paste-fields">
+              <input
+                type="number"
+                placeholder="BPM"
+                value={eBpm || ""}
+                onChange={(e) => setEBpm(Number(e.target.value))}
+              />
+              <input placeholder="Key" value={eKey} onChange={(e) => setEKey(e.target.value)} />
+              <label className="capo-field">
+                Capo
+                <select value={eCapo} onChange={(e) => setECapo(Number(e.target.value))}>
+                  {Array.from({ length: 13 }, (_, n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
             <h4>Spotify track</h4>
             <p className="muted small">
@@ -184,7 +206,7 @@ export function SongPicker({
 
             <h4>Chords</h4>
             <textarea rows={8} value={eChordpro} onChange={(e) => setEChordpro(e.target.value)} />
-            <StrumEditor value={eStrums} onChange={setEStrums} defaultBpm={eTempo} />
+            <StrumEditor value={eStrums} onChange={setEStrums} defaultBpm={eBpm} />
             <div className="edit-actions">
               <button onClick={saveEdit} disabled={busy}>Save</button>
               <button className="ghost" onClick={() => setEditing(false)}>Cancel</button>

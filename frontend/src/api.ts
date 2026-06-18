@@ -92,6 +92,9 @@ export async function importPdf(file: File): Promise<Song> {
 export interface SongPatch {
   title?: string;
   artist?: string;
+  bpm?: number;
+  key?: string;
+  capo?: number;
   chordpro?: string;
   spotifyUri?: string;
   strumming?: StrumPattern[];

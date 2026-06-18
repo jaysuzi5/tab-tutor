@@ -96,6 +96,9 @@ class ImportTextReq(BaseModel):
 class PatchSongReq(BaseModel):
     title: Optional[str] = None
     artist: Optional[str] = None
+    bpm: Optional[int] = None
+    key: Optional[str] = None
+    capo: Optional[int] = None
     chordpro: Optional[str] = None
     spotifyUri: Optional[str] = None
     strumming: Optional[list[StrumPattern]] = None

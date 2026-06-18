@@ -140,6 +140,12 @@ def update_song(song_id: str, patch: dict) -> Song | None:
         s.title = patch["title"]
     if patch.get("artist") is not None:
         s.artist = patch["artist"]
+    if patch.get("bpm") is not None:
+        s.tempo = patch["bpm"]
+    if patch.get("key") is not None:
+        s.key = patch["key"]
+    if patch.get("capo") is not None:
+        s.capo = patch["capo"]
     if patch.get("spotifyUri") is not None:
         s.spotifyUri = patch["spotifyUri"] or None
     if patch.get("chordpro") is not None:
