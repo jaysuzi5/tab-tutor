@@ -211,10 +211,16 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .chordsheet .lyrics { white-space: pre; }
-.chordsheet .lyrics.measure {
-  font-family: ui-monospace, Menlo, Consolas, monospace;
-  white-space: pre; color: var(--accent); letter-spacing: 0.5px;
+/* Measure/riff rows: flatten chord+lyric onto one monospace line; chords green
+   inline (not raised). [C] in a |…| line shows as green C on the same line. */
+.chordsheet .row.measure {
+  font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1.6;
 }
+.chordsheet .row.measure .column { flex-direction: row; align-items: baseline; }
+.chordsheet .row.measure .chord {
+  color: var(--accent); min-height: 0; font-weight: 700;
+}
+.chordsheet .row.measure .lyrics { white-space: pre; }
 .chordsheet .comment {
   color: var(--muted); font-style: italic; margin: 10px 0 2px;
 }

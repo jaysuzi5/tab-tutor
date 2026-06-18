@@ -68,9 +68,10 @@ export function ChartView({
       el.classList.toggle("cur-hit", !scrollOnly && onCursor && cursorState === "hit");
       el.classList.toggle("cur-miss", !scrollOnly && onCursor && cursorState === "miss");
     });
-    // Measure / riff lines (start with "|") render monospace so the bars align.
-    root.querySelectorAll<HTMLElement>(".lyrics").forEach((el) => {
-      el.classList.toggle("measure", (el.textContent ?? "").trim().startsWith("|"));
+    // Measure / riff rows (contain "|"): flatten so chords sit inline (green) on
+    // one baseline with the bars, not raised into a separate column.
+    root.querySelectorAll<HTMLElement>(".row").forEach((row) => {
+      row.classList.toggle("measure", (row.textContent ?? "").includes("|"));
     });
   }, [activeChord, cursorIndex, cursorState, scrollOnly, html]);
 
