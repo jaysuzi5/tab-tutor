@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { MicApi } from "../engine/useMic";
 import type { SpotifyApi } from "../engine/useSpotify";
-import type { EnableState } from "../App";
 import { usePractice, type Mode } from "../engine/usePractice";
 import { buildTimeline } from "../engine/timeline";
 import { BUILTIN_SONGS } from "../songs";
@@ -10,7 +9,6 @@ import { ChartView } from "../ui/ChartView";
 import { Transport } from "../ui/Transport";
 import { SongPicker } from "../ui/SongPicker";
 import { ChordDiagram } from "../ui/ChordDiagram";
-import { EnablePanel } from "../ui/EnablePanel";
 import { playChord } from "../engine/chordAudio";
 
 const AlphaTabView = lazy(() =>
@@ -19,15 +17,7 @@ const AlphaTabView = lazy(() =>
 
 const FALLBACK = BUILTIN_SONGS[0];
 
-export function SongsPage({
-  mic,
-  sp,
-  enable,
-}: {
-  mic: MicApi;
-  sp: SpotifyApi;
-  enable: EnableState;
-}) {
+export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   const { frame, setExpected, setTiming } = mic;
 
   const [songs, setSongs] = useState<SongMeta[]>([]);
@@ -130,7 +120,7 @@ export function SongsPage({
   }, [frame, cursorIndex, progression]);
 
   return (
-    <main className="layout">
+    <main className="layout single">
       <section className="left">
         <SongPicker
           songs={songs}
@@ -194,10 +184,6 @@ export function SongsPage({
           </>
         )}
       </section>
-
-      <aside className="right">
-        <EnablePanel mic={mic} sp={sp} {...enable} />
-      </aside>
     </main>
   );
 }

@@ -38,6 +38,17 @@ export function freqToPitchClass(freq: number): number {
   return ((Math.round(freqToMidi(freq)) % 12) + 12) % 12;
 }
 
+// Parse a note name like "E2", "Eb3", "F#4" -> MIDI number (null if invalid).
+export function noteToMidi(s: string): number | null {
+  const m = s.trim().match(/^([A-Ga-g])([#b]?)(-?\d+)$/);
+  if (!m) return null;
+  const base: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  let v = base[m[1].toUpperCase()];
+  if (m[2] === "#") v++;
+  if (m[2] === "b") v--;
+  return (parseInt(m[3], 10) + 1) * 12 + v;
+}
+
 // Standard guitar open strings (low to high), for the tuner target hints.
 export const GUITAR_STRINGS: { label: string; midi: number; freq: number }[] = [
   { label: "E2", midi: 40, freq: midiToFreq(40) },

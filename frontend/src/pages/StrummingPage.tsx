@@ -5,10 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MicApi } from "../engine/useMic";
-import type { SpotifyApi } from "../engine/useSpotify";
-import type { EnableState } from "../App";
 import { Metronome } from "../engine/clock";
-import { EnablePanel } from "../ui/EnablePanel";
 
 type Sym = "D" | "U" | "";
 interface Pattern {
@@ -35,15 +32,7 @@ interface Stats {
 }
 const ZERO: Stats = { hits: 0, expected: 0, extras: 0, timingSum: 0, timingN: 0 };
 
-export function StrummingPage({
-  mic,
-  sp,
-  enable,
-}: {
-  mic: MicApi;
-  sp: SpotifyApi;
-  enable: EnableState;
-}) {
+export function StrummingPage({ mic }: { mic: MicApi }) {
   const { status, setTiming } = mic;
   const running = status === "running";
 
@@ -238,7 +227,6 @@ export function StrummingPage({
       </section>
 
       <aside className="right">
-        <EnablePanel mic={mic} sp={sp} {...enable} />
         <div className="panel">
           <h3>Tips</h3>
           <p className="muted small">

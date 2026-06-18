@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { useMic } from "./engine/useMic";
 import { useSpotify } from "./engine/useSpotify";
 import { SongsPage } from "./pages/SongsPage";
-import { PracticePage } from "./pages/PracticePage";
-import { SpeedTrainerPage } from "./pages/SpeedTrainerPage";
+import { ChordsPage } from "./pages/ChordsPage";
 import { StrummingPage } from "./pages/StrummingPage";
 import { TunerPage } from "./pages/TunerPage";
+import { SetupPage } from "./pages/SetupPage";
 
-type View = "songs" | "practice" | "trainer" | "strum" | "tuner";
+type View = "songs" | "chords" | "strum" | "tuner" | "setup";
 
 export interface EnableState {
   wantMic: boolean;
@@ -18,30 +18,28 @@ export interface EnableState {
 
 const HASH: Record<View, string> = {
   songs: "#/",
-  practice: "#/practice",
-  trainer: "#/trainer",
+  chords: "#/chords",
   strum: "#/strum",
   tuner: "#/tuner",
+  setup: "#/setup",
 };
 const NAV: { view: View; label: string }[] = [
   { view: "songs", label: "Songs" },
-  { view: "practice", label: "Practice" },
-  { view: "tuner", label: "Tuner" },
-  { view: "trainer", label: "Speed Trainer" },
+  { view: "chords", label: "Chords" },
   { view: "strum", label: "Strumming" },
+  { view: "tuner", label: "Tuner" },
+  { view: "setup", label: "Setup" },
 ];
 
-const viewFromHash = (): View => {
-  const h = location.hash;
-  return (Object.keys(HASH) as View[]).find((v) => HASH[v] === h) ?? "songs";
-};
+const viewFromHash = (): View =>
+  (Object.keys(HASH) as View[]).find((v) => HASH[v] === location.hash) ?? "songs";
 
 export default function App() {
   const mic = useMic();
   const sp = useSpotify();
   const [view, setView] = useState<View>(viewFromHash);
   const [wantMic, setWantMic] = useState(true);
-  const [wantSpotify, setWantSpotify] = useState(false);
+  const [wantSpotify, setWantSpotify] = useState(true);
   const enable: EnableState = { wantMic, setWantMic, wantSpotify, setWantSpotify };
 
   useEffect(() => {
@@ -61,27 +59,23 @@ export default function App() {
         <h1>🎸 Tab Tutor</h1>
         <nav className="nav">
           {NAV.map((n) => (
-            <button
-              key={n.view}
-              className={view === n.view ? "active" : ""}
-              onClick={() => go(n.view)}
-            >
+            <button key={n.view} className={view === n.view ? "active" : ""} onClick={() => go(n.view)}>
               {n.label}
             </button>
           ))}
         </nav>
       </header>
 
-      {view === "practice" ? (
-        <PracticePage mic={mic} sp={sp} enable={enable} />
-      ) : view === "tuner" ? (
-        <TunerPage mic={mic} sp={sp} enable={enable} />
-      ) : view === "trainer" ? (
-        <SpeedTrainerPage mic={mic} sp={sp} enable={enable} />
+      {view === "chords" ? (
+        <ChordsPage mic={mic} />
       ) : view === "strum" ? (
-        <StrummingPage mic={mic} sp={sp} enable={enable} />
+        <StrummingPage mic={mic} />
+      ) : view === "tuner" ? (
+        <TunerPage mic={mic} />
+      ) : view === "setup" ? (
+        <SetupPage mic={mic} sp={sp} enable={enable} />
       ) : (
-        <SongsPage mic={mic} sp={sp} enable={enable} />
+        <SongsPage mic={mic} sp={sp} />
       )}
     </div>
   );
