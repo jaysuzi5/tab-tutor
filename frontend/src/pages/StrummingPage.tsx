@@ -5,8 +5,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MicApi } from "../engine/useMic";
+import type { SpotifyApi } from "../engine/useSpotify";
+import type { EnableState } from "../App";
 import { Metronome } from "../engine/clock";
-import { Calibration } from "../ui/Calibration";
+import { EnablePanel } from "../ui/EnablePanel";
 
 type Sym = "D" | "U" | "";
 interface Pattern {
@@ -33,8 +35,16 @@ interface Stats {
 }
 const ZERO: Stats = { hits: 0, expected: 0, extras: 0, timingSum: 0, timingN: 0 };
 
-export function StrummingPage({ mic }: { mic: MicApi }) {
-  const { status, frame, start, setTiming } = mic;
+export function StrummingPage({
+  mic,
+  sp,
+  enable,
+}: {
+  mic: MicApi;
+  sp: SpotifyApi;
+  enable: EnableState;
+}) {
+  const { status, setTiming } = mic;
   const running = status === "running";
 
   const [patternIdx, setPatternIdx] = useState(2);
@@ -154,7 +164,7 @@ export function StrummingPage({ mic }: { mic: MicApi }) {
           </p>
 
           {!running ? (
-            <Calibration status={status} result={frame?.pitch ?? null} onStart={start} />
+            <p className="muted">Enable the mic (right) to start.</p>
           ) : (
             <>
               <div className="strum-controls">
@@ -228,6 +238,7 @@ export function StrummingPage({ mic }: { mic: MicApi }) {
       </section>
 
       <aside className="right">
+        <EnablePanel mic={mic} sp={sp} {...enable} />
         <div className="panel">
           <h3>Tips</h3>
           <p className="muted small">

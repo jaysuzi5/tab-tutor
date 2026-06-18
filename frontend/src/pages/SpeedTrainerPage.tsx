@@ -4,8 +4,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MicApi } from "../engine/useMic";
+import type { SpotifyApi } from "../engine/useSpotify";
+import type { EnableState } from "../App";
 import { LiveChord } from "../ui/LiveChord";
-import { Calibration } from "../ui/Calibration";
+import { EnablePanel } from "../ui/EnablePanel";
 import { ChordDiagram } from "../ui/ChordDiagram";
 
 // Beginner open-chord pool (the cowboy chords the detector handles well).
@@ -18,8 +20,16 @@ function pickNext(prev: string | null): string {
   return n;
 }
 
-export function SpeedTrainerPage({ mic }: { mic: MicApi }) {
-  const { status, frame, events, start, setExpected } = mic;
+export function SpeedTrainerPage({
+  mic,
+  sp,
+  enable,
+}: {
+  mic: MicApi;
+  sp: SpotifyApi;
+  enable: EnableState;
+}) {
+  const { status, frame, events, setExpected } = mic;
   const running = status === "running";
 
   const [active, setActive] = useState(false);
@@ -106,7 +116,7 @@ export function SpeedTrainerPage({ mic }: { mic: MicApi }) {
           </p>
 
           {!running ? (
-            <Calibration status={status} result={frame?.pitch ?? null} onStart={start} />
+            <p className="muted">Enable the mic (right) to start.</p>
           ) : !active ? (
             <div className="speed-setup">
               {result && (
@@ -162,6 +172,7 @@ export function SpeedTrainerPage({ mic }: { mic: MicApi }) {
       </section>
 
       <aside className="right">
+        <EnablePanel mic={mic} sp={sp} {...enable} />
         {running && (
           <div className="panel">
             <h3>Now hearing</h3>
