@@ -140,6 +140,18 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
           </div>
         )}
 
+        {song?.strumming && song.strumming.length > 0 && (
+          <div className="song-strums">
+            <h4>Strumming</h4>
+            {song.strumming.map((s, i) => (
+              <div key={i} className="strum-pattern">
+                {s.label && <span className="strum-label">{s.label}</span>}
+                <span className="strum-text">{s.pattern}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {!isTab && chords.length > 0 && (
           <div className="song-chords">
             {chords.map((c) => (

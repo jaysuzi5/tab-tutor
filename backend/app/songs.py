@@ -145,6 +145,10 @@ def update_song(song_id: str, patch: dict) -> Song | None:
     if patch.get("chordpro") is not None:
         s.chordpro = patch["chordpro"]
         s.chords = _chords_from_chordpro(s.chordpro)
+    if patch.get("strumming") is not None:
+        from .models import StrumPattern
+        s.strumming = [x if isinstance(x, StrumPattern) else StrumPattern(**x)
+                       for x in patch["strumming"]]
     REPO.update_import(s)
     return s
 
@@ -170,6 +174,7 @@ def import_text(meta: dict, spotify_uri: str | None) -> Song:
         license="user-supplied",
         spotifyUri=spotify_uri,
         chordpro=chordpro,
+        strumming=meta.get("strumming", []),
     )
     REPO.save_import(song)
     return song

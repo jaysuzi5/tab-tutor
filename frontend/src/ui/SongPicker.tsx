@@ -5,8 +5,27 @@
 import { useEffect, useState } from "react";
 import {
   importText, importFile, getSong, updateSong, deleteSong,
-  spotifySearch, type SongMeta, type SpotifyTrack,
+  spotifySearch, type SongMeta, type SpotifyTrack, type StrumPattern,
 } from "../api";
+
+// Editable list of strumming patterns (note/comment + pattern).
+function StrumRows({ value, onChange }: { value: StrumPattern[]; onChange: (v: StrumPattern[]) => void }) {
+  const set = (i: number, k: keyof StrumPattern, v: string) =>
+    onChange(value.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)));
+  return (
+    <div className="strum-rows">
+      <h4>Strumming patterns</h4>
+      {value.map((s, i) => (
+        <div key={i} className="strum-row">
+          <input placeholder="Note (e.g. Verse)" value={s.label} onChange={(e) => set(i, "label", e.target.value)} />
+          <input className="mono" placeholder="D  D U  U D U" value={s.pattern} onChange={(e) => set(i, "pattern", e.target.value)} />
+          <button className="ghost" onClick={() => onChange(value.filter((_, idx) => idx !== i))}>×</button>
+        </div>
+      ))}
+      <button className="ghost" onClick={() => onChange([...value, { label: "", pattern: "" }])}>+ Add pattern</button>
+    </div>
+  );
+}
 
 export function SongPicker({
   songs,
@@ -28,6 +47,7 @@ export function SongPicker({
   const [pBpm, setPBpm] = useState("");
   const [pKey, setPKey] = useState("");
   const [pCapo, setPCapo] = useState(0);
+  const [pStrums, setPStrums] = useState<StrumPattern[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -37,6 +57,7 @@ export function SongPicker({
   const [eArtist, setEArtist] = useState("");
   const [eSpotify, setESpotify] = useState("");
   const [eChordpro, setEChordpro] = useState("");
+  const [eStrums, setEStrums] = useState<StrumPattern[]>([]);
   const [eQuery, setEQuery] = useState("");
   const [eResults, setEResults] = useState<SpotifyTrack[]>([]);
 
@@ -54,6 +75,7 @@ export function SongPicker({
       setEArtist(full.artist ?? "");
       setESpotify(full.spotifyUri ?? "");
       setEChordpro(full.chordpro ?? "");
+      setEStrums(full.strumming ?? []);
       setEQuery(`${full.title ?? ""} ${full.artist ?? ""}`.trim());
       setEResults([]);
       setOpen(false);
@@ -74,6 +96,7 @@ export function SongPicker({
     try {
       await updateSong(selectedId, {
         title: eTitle, artist: eArtist, spotifyUri: eSpotify, chordpro: eChordpro,
+        strumming: eStrums.filter((s) => s.label || s.pattern),
       });
       setEditing(false);
       onImported(selectedId);
@@ -104,7 +127,7 @@ export function SongPicker({
       const s = await fn();
       onImported(s.id);
       setOpen(false);
-      setCp(""); setTitle(""); setPArtist(""); setPBpm(""); setPKey(""); setPCapo(0);
+      setCp(""); setTitle(""); setPArtist(""); setPBpm(""); setPKey(""); setPCapo(0); setPStrums([]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "import failed");
     } finally {
@@ -177,6 +200,7 @@ export function SongPicker({
 
             <h4>Chords</h4>
             <textarea rows={8} value={eChordpro} onChange={(e) => setEChordpro(e.target.value)} />
+            <StrumRows value={eStrums} onChange={setEStrums} />
             <div className="edit-actions">
               <button onClick={saveEdit} disabled={busy}>Save</button>
               <button className="ghost" onClick={() => setEditing(false)}>Cancel</button>
@@ -222,6 +246,7 @@ export function SongPicker({
                     key: pKey || undefined,
                     capo: pCapo,
                     text: cp,
+                    strumming: pStrums.filter((s) => s.label || s.pattern),
                   }),
                 )
               }
@@ -232,6 +257,7 @@ export function SongPicker({
               Paste chords-above-lyrics text. We align the chords, build the chart,
               and link the Spotify track (you can fix it later via Edit).
             </p>
+            <StrumRows value={pStrums} onChange={setPStrums} />
           </div>
 
           <div className="import-block">

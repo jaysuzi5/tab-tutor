@@ -17,10 +17,16 @@ export interface SongMeta {
   isBuiltin: boolean;
 }
 
+export interface StrumPattern {
+  label: string;
+  pattern: string;
+}
+
 export interface Song extends SongMeta {
   key?: string | null;
   capo?: number | null;
   chordpro: string;
+  strumming?: StrumPattern[];
 }
 
 export async function listSongs(): Promise<SongMeta[]> {
@@ -60,6 +66,7 @@ export interface TextImport {
   key?: string;
   capo?: number;
   text: string;
+  strumming?: StrumPattern[];
 }
 
 export async function importText(req: TextImport): Promise<Song> {
@@ -85,6 +92,7 @@ export interface SongPatch {
   artist?: string;
   chordpro?: string;
   spotifyUri?: string;
+  strumming?: StrumPattern[];
 }
 
 export async function updateSong(id: string, patch: SongPatch): Promise<Song> {

@@ -43,11 +43,13 @@ CREATE TABLE IF NOT EXISTS songs (
   is_builtin BOOLEAN NOT NULL DEFAULT false,
   chordpro TEXT NOT NULL DEFAULT '',
   spotify_uri TEXT,
+  strumming JSONB NOT NULL DEFAULT '[]',
   blob BYTEA,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
--- Backfill for clusters created before spotify_uri existed.
+-- Backfill for clusters created before these columns existed.
 ALTER TABLE songs ADD COLUMN IF NOT EXISTS spotify_uri TEXT;
+ALTER TABLE songs ADD COLUMN IF NOT EXISTS strumming JSONB NOT NULL DEFAULT '[]';
 -- Schema-ready for the per-user progress moat (unused in MVP).
 CREATE TABLE IF NOT EXISTS progress (
   user_key TEXT PRIMARY KEY,
@@ -129,19 +131,20 @@ class PgRepo:
         with self.pool.connection() as conn:
             conn.execute(
                 "INSERT INTO songs (id,title,artist,key,tempo,capo,difficulty,chords,license,"
-                "source,format,is_builtin,chordpro,spotify_uri,blob) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s,%s) "
+                "source,format,is_builtin,chordpro,spotify_uri,strumming,blob) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s,%s::jsonb,%s) "
                 "ON CONFLICT (id) DO NOTHING",
                 (song.id, song.title, song.artist, song.key, song.tempo, song.capo,
                  song.difficulty, json.dumps(song.chords), song.license, song.source,
-                 song.format, song.isBuiltin, song.chordpro, song.spotifyUri, blob),
+                 song.format, song.isBuiltin, song.chordpro, song.spotifyUri,
+                 json.dumps([s.model_dump() for s in song.strumming]), blob),
             )
 
     def list_imports(self) -> dict[str, Song]:
         with self.pool.connection() as conn:
             rows = conn.execute(
                 "SELECT id,title,artist,key,tempo,capo,difficulty,chords,license,source,"
-                "format,is_builtin,chordpro,spotify_uri FROM songs WHERE is_builtin=false "
+                "format,is_builtin,chordpro,spotify_uri,strumming FROM songs WHERE is_builtin=false "
                 "ORDER BY created_at"
             ).fetchall()
         out: dict[str, Song] = {}
@@ -150,6 +153,7 @@ class PgRepo:
                 id=r[0], title=r[1], artist=r[2], key=r[3], tempo=r[4], capo=r[5],
                 difficulty=r[6], chords=r[7] or [], license=r[8], source=r[9],
                 format=r[10], isBuiltin=r[11], chordpro=r[12], spotifyUri=r[13],
+                strumming=r[14] or [],
             )
         return out
 
@@ -162,9 +166,10 @@ class PgRepo:
         with self.pool.connection() as conn:
             conn.execute(
                 "UPDATE songs SET title=%s, artist=%s, key=%s, capo=%s, chords=%s::jsonb, "
-                "chordpro=%s, spotify_uri=%s WHERE id=%s AND is_builtin=false",
+                "chordpro=%s, spotify_uri=%s, strumming=%s::jsonb WHERE id=%s AND is_builtin=false",
                 (song.title, song.artist, song.key, song.capo, json.dumps(song.chords),
-                 song.chordpro, song.spotifyUri, song.id),
+                 song.chordpro, song.spotifyUri,
+                 json.dumps([s.model_dump() for s in song.strumming]), song.id),
             )
 
     def delete_import(self, song_id: str) -> None:

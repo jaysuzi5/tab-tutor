@@ -66,8 +66,14 @@ class SongMeta(BaseModel):
     isBuiltin: bool = True
 
 
+class StrumPattern(BaseModel):
+    label: str = ""      # note/comment, e.g. "Verse"
+    pattern: str = ""    # e.g. "D  D U  U D U"
+
+
 class Song(SongMeta):
     chordpro: str = ""  # empty for binary formats (Guitar Pro / MusicXML)
+    strumming: list[StrumPattern] = []
 
 
 class ImportChordProReq(BaseModel):
@@ -82,6 +88,7 @@ class ImportTextReq(BaseModel):
     key: Optional[str] = None
     capo: Optional[int] = None
     text: str
+    strumming: list[StrumPattern] = []
 
 
 class PatchSongReq(BaseModel):
@@ -89,3 +96,4 @@ class PatchSongReq(BaseModel):
     artist: Optional[str] = None
     chordpro: Optional[str] = None
     spotifyUri: Optional[str] = None
+    strumming: Optional[list[StrumPattern]] = None

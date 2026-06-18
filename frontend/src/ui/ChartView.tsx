@@ -1,10 +1,53 @@
-// ChordPro sheet in a fixed-height scroll box. Scroll is CONTINUOUS, driven by
-// song progress (0..1) so it glides smoothly at tempo instead of jumping per
-// chord. Per-chord coloring still uses the cursor index. Manual scroll pauses
-// auto-scroll; auto-scroll only happens while playing.
+// ChordPro sheet in a fixed-height scroll box with continuous (bpm-driven)
+// autoscroll + per-chord coloring. Measure/riff lines (start with "|") are
+// rendered by a custom inline renderer so exact spacing is preserved and
+// bracketed chords show green inline — chordsheetjs would raise them and
+// collapse the spaces.
 
-import { useEffect, useMemo, useRef } from "react";
+import { Fragment, useEffect, useMemo, useRef } from "react";
 import ChordSheetJS from "chordsheetjs";
+
+interface Block {
+  measure: boolean;
+  // sheet block -> html; measure block -> raw line
+  html?: string;
+  text?: string;
+}
+
+function buildBlocks(chordpro: string): Block[] {
+  const lines = chordpro.split("\n");
+  const blocks: Block[] = [];
+  let buf: string[] = [];
+  const flush = () => {
+    if (!buf.length) return;
+    const song = new ChordSheetJS.ChordProParser().parse(buf.join("\n"));
+    blocks.push({ measure: false, html: new ChordSheetJS.HtmlDivFormatter().format(song) });
+    buf = [];
+  };
+  for (const line of lines) {
+    if (line.trim().startsWith("|")) {
+      flush();
+      blocks.push({ measure: true, text: line });
+    } else {
+      buf.push(line);
+    }
+  }
+  flush();
+  return blocks;
+}
+
+// Render a measure line: [C] -> green chord span, everything else verbatim.
+function renderMeasure(text: string) {
+  const parts = text.split(/(\[[^\]]+\])/);
+  return parts.map((p, i) => {
+    const m = p.match(/^\[([^\]]+)\]$/);
+    return m ? (
+      <span key={i} className="chord measure-chord">{m[1]}</span>
+    ) : (
+      <Fragment key={i}>{p}</Fragment>
+    );
+  });
+}
 
 export function ChartView({
   chordpro,
@@ -21,23 +64,17 @@ export function ChartView({
   cursorState?: "pending" | "hit" | "miss" | null;
   scrollOnly?: boolean;
   playing?: boolean;
-  progress?: number; // 0..1 through the song
+  progress?: number;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
 
-  const html = useMemo(() => {
-    const song = new ChordSheetJS.ChordProParser().parse(chordpro);
-    return new ChordSheetJS.HtmlDivFormatter().format(song);
-  }, [chordpro]);
+  const blocks = useMemo(() => buildBlocks(chordpro), [chordpro]);
 
-  // New run resets the manual-scroll lock.
   useEffect(() => {
     if (playing) userScrolledRef.current = false;
   }, [playing]);
-
-  // User scroll while playing -> stop auto-scrolling (don't fight them).
   useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
@@ -52,7 +89,7 @@ export function ChartView({
     };
   }, [playing]);
 
-  // Per-chord coloring (no scrolling here).
+  // Per-chord coloring across all blocks (document order matches the timeline).
   useEffect(() => {
     const root = sheetRef.current;
     if (!root) return;
@@ -68,15 +105,8 @@ export function ChartView({
       el.classList.toggle("cur-hit", !scrollOnly && onCursor && cursorState === "hit");
       el.classList.toggle("cur-miss", !scrollOnly && onCursor && cursorState === "miss");
     });
-    // Measure / riff rows (contain "|"): flatten so chords sit inline (green) on
-    // one baseline with the bars, not raised into a separate column.
-    root.querySelectorAll<HTMLElement>(".row").forEach((row) => {
-      row.classList.toggle("measure", (row.textContent ?? "").includes("|"));
-    });
-  }, [activeChord, cursorIndex, cursorState, scrollOnly, html]);
+  }, [activeChord, cursorIndex, cursorState, scrollOnly, blocks]);
 
-  // Continuous auto-scroll: map progress onto the scrollable range. Only while
-  // playing and only if the user hasn't taken over.
   useEffect(() => {
     const box = boxRef.current;
     if (!box || !playing || userScrolledRef.current) return;
@@ -87,7 +117,15 @@ export function ChartView({
   return (
     <div className="chart">
       <div ref={boxRef} className="chart-scroll">
-        <div ref={sheetRef} className="chordsheet" dangerouslySetInnerHTML={{ __html: html }} />
+        <div ref={sheetRef} className="chordsheet">
+          {blocks.map((b, i) =>
+            b.measure ? (
+              <div key={i} className="measure-line">{renderMeasure(b.text!)}</div>
+            ) : (
+              <div key={i} dangerouslySetInnerHTML={{ __html: b.html! }} />
+            ),
+          )}
+        </div>
       </div>
     </div>
   );

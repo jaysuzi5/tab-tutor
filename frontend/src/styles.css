@@ -189,6 +189,26 @@ body {
   background: var(--chip); padding: 4px 10px; border-radius: 8px;
 }
 
+/* strumming patterns — editor rows + display */
+.strum-rows { margin-top: 10px; }
+.strum-rows h4 { margin: 0 0 6px; font-size: 14px; }
+.strum-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.strum-row input { margin-bottom: 0; }
+.strum-row input:first-child { flex: 0 0 130px; }
+.strum-row input.mono { flex: 1; font-family: ui-monospace, Menlo, monospace; }
+.strum-row button { margin-top: 0; padding: 4px 10px; }
+.song-strums {
+  background: var(--panel); border: 1px solid #262b33; border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 14px;
+}
+.song-strums h4 { margin: 0 0 8px; font-size: 14px; }
+.strum-pattern { display: flex; align-items: baseline; gap: 12px; margin: 4px 0; }
+.strum-label { font-weight: 700; min-width: 90px; color: var(--muted); }
+.strum-text {
+  font-family: ui-monospace, Menlo, Consolas, monospace; white-space: pre;
+  font-size: 16px; letter-spacing: 1px;
+}
+
 /* chord cards (every chord in the song) */
 .song-chords { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
 .chord-card {
@@ -211,16 +231,15 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .chordsheet .lyrics { white-space: pre; }
-/* Measure/riff rows: flatten chord+lyric onto one monospace line; chords green
-   inline (not raised). [C] in a |…| line shows as green C on the same line. */
-.chordsheet .row.measure {
-  font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1.6;
+/* Measure/riff lines: custom-rendered, monospace, exact spacing preserved,
+   bracketed chords green inline on one line. */
+.chordsheet .measure-line {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre; line-height: 1.8; font-size: 15px;
 }
-.chordsheet .row.measure .column { flex-direction: row; align-items: baseline; }
-.chordsheet .row.measure .chord {
-  color: var(--accent); min-height: 0; font-weight: 700;
+.chordsheet .measure-line .measure-chord {
+  color: var(--accent); font-weight: 700; min-height: 0;
 }
-.chordsheet .row.measure .lyrics { white-space: pre; }
 .chordsheet .comment {
   color: var(--muted); font-style: italic; margin: 10px 0 2px;
 }
