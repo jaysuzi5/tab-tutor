@@ -68,6 +68,10 @@ export function ChartView({
       el.classList.toggle("cur-hit", !scrollOnly && onCursor && cursorState === "hit");
       el.classList.toggle("cur-miss", !scrollOnly && onCursor && cursorState === "miss");
     });
+    // Measure / riff lines (start with "|") render monospace so the bars align.
+    root.querySelectorAll<HTMLElement>(".lyrics").forEach((el) => {
+      el.classList.toggle("measure", (el.textContent ?? "").trim().startsWith("|"));
+    });
   }, [activeChord, cursorIndex, cursorState, scrollOnly, html]);
 
   // Continuous auto-scroll: map progress onto the scrollable range. Only while

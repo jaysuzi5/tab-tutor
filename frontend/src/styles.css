@@ -211,6 +211,10 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .chordsheet .lyrics { white-space: pre; }
+.chordsheet .lyrics.measure {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre; color: var(--accent); letter-spacing: 0.5px;
+}
 .chordsheet .comment {
   color: var(--muted); font-style: italic; margin: 10px 0 2px;
 }
