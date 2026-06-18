@@ -14,8 +14,8 @@ export function SetupPage({
 }) {
   const running = mic.status === "running";
   const level = mic.frame?.pitch.level ?? 0;
-  // sqrt curve so quiet guitar (RMS ~0.01) is clearly visible, not a sliver.
-  const pct = Math.min(100, Math.sqrt(level) * 230);
+  // Linear gain that tracks dynamics (sqrt saturated to 100% and looked stuck).
+  const pct = Math.min(100, Math.round(level * 300));
 
   return (
     <main className="layout single">

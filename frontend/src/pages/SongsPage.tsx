@@ -26,6 +26,8 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   const [song, setSong] = useState<Song | null>(null);
   const [tempo, setTempo] = useState(96);
   const [cursorIndex, setCursorIndex] = useState(-1);
+  const [progress, setProgress] = useState(0);
+  const [offsetBeats, setOffsetBeats] = useState(0);
   const [panelOpen, setPanelOpen] = useState(false);
 
   const refreshList = (selectId?: string) =>
@@ -67,9 +69,11 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
     tempo,
     mode: "playthrough",
     drillStart: 0,
+    offsetBeats,
     setExpected,
     setTiming,
     onCursor: setCursorIndex,
+    onProgress: setProgress,
     onStop: () => sp.pause(),
   });
 
@@ -169,6 +173,12 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
               spotifyStartAvailable={canSpotifyStart}
               onSpotifyStart={syncedStart}
             />
+            <div className="sync-offset">
+              <span className="muted small">Scroll sync</span>
+              <button onClick={() => setOffsetBeats((o) => o - 1)} title="scroll earlier">−</button>
+              <span className="muted small">{offsetBeats > 0 ? `+${offsetBeats}` : offsetBeats} beats</span>
+              <button onClick={() => setOffsetBeats((o) => o + 1)} title="scroll later">+</button>
+            </div>
             {practice.done && (
               <p className="done-banner">🎉 Reached the end — nice run! Hit Play to go again.</p>
             )}
@@ -179,7 +189,7 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
               cursorState={cursorState}
               scrollOnly={spotifyMode}
               playing={practice.playing}
-              done={practice.done}
+              progress={progress}
             />
           </>
         )}

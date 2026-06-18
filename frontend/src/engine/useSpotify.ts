@@ -133,6 +133,14 @@ export function useSpotify() {
 
   const pause = useCallback(() => playerRef.current?.pause(), []);
   const togglePlay = useCallback(() => playerRef.current?.togglePlay(), []);
+  const disconnect = useCallback(() => {
+    playerRef.current?.disconnect();
+    playerRef.current = null;
+    setToken(null);
+    setDeviceId(null);
+    setCurrent(null);
+    setStatus("");
+  }, []);
 
   return {
     enabled,
@@ -146,6 +154,7 @@ export function useSpotify() {
     playUri,
     pause,
     togglePlay,
+    disconnect,
   };
 }
 

@@ -16,7 +16,9 @@ export function usePractice({
   setExpected,
   setTiming,
   onCursor,
+  onProgress,
   onStop,
+  offsetBeats = 0,
 }: {
   chordpro: string;
   tempo: number;
@@ -25,7 +27,9 @@ export function usePractice({
   setExpected: (c: string | null) => void;
   setTiming: (fn: ((onsetMs: number) => number | null) | null) => void;
   onCursor: (idx: number) => void;
+  onProgress?: (p: number) => void; // 0..1 through the song (continuous scroll)
   onStop?: () => void; // fired on stop AND end-of-song (e.g. pause Spotify)
+  offsetBeats?: number; // per-song sync nudge
 }) {
   const tl = useMemo(() => buildTimeline(chordpro), [chordpro]);
   const metroRef = useRef<Metronome>(new Metronome());
@@ -34,11 +38,13 @@ export function usePractice({
   const [countIn, setCountIn] = useState(0);
   const [done, setDone] = useState(false);
 
-  const cfgRef = useRef({ tempo, mode, drillStart });
-  cfgRef.current = { tempo, mode, drillStart };
+  const cfgRef = useRef({ tempo, mode, drillStart, offsetBeats });
+  cfgRef.current = { tempo, mode, drillStart, offsetBeats };
 
   const onStopRef = useRef(onStop);
   onStopRef.current = onStop;
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
 
   // Fired once when the count-in ends and music begins (start the backing track
   // here so the song + autoscroll begin together, after the 4-count).
@@ -74,11 +80,12 @@ export function usePractice({
         onMusicStartRef.current?.(); // e.g. start the Spotify track now
       }
       setCountIn(0);
-      const beat = m.currentMusicBeat(now);
-      const { mode, drillStart } = cfgRef.current;
+      const { mode, drillStart, offsetBeats } = cfgRef.current;
+      const beat = m.currentMusicBeat(now) + offsetBeats;
+      const total = tl.chords.length * tl.beatsPerChord;
       // Play-through runs once to the end and stops; Drill loops a window.
       if (mode === "playthrough") {
-        const seg = Math.floor(beat / tl.beatsPerChord);
+        const seg = Math.floor(Math.max(0, beat) / tl.beatsPerChord);
         if (seg >= tl.chords.length) {
           endSongRef.current();
           return; // stop scheduling — song finished
@@ -87,10 +94,11 @@ export function usePractice({
         onCursor(seg);
       } else {
         const win = { start: drillStart, end: Math.min(drillStart + 2, tl.chords.length) };
-        const idx = chordIndexAt(tl, beat, win);
+        const idx = chordIndexAt(tl, Math.max(0, beat), win);
         setExpected(tl.chords[idx] ?? null);
         onCursor(idx);
       }
+      onProgressRef.current?.(total ? Math.max(0, Math.min(1, beat / total)) : 0);
     }
     rafRef.current = requestAnimationFrame(loop);
   }, [tl, setExpected, onCursor]);

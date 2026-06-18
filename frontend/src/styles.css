@@ -102,6 +102,18 @@ body {
 .enable-row input { width: 16px; height: 16px; accent-color: var(--accent); }
 .enable-row .ok { font-style: normal; }
 .enable-panel button { width: 100%; }
+.status-dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  margin: 0 2px; vertical-align: middle;
+}
+.status-dot.on { background: var(--accent); box-shadow: 0 0 6px rgba(74,222,128,0.7); }
+.status-dot.off { background: #555; }
+
+/* song scroll-sync offset */
+.sync-offset { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.sync-offset button {
+  margin: 0; width: 30px; padding: 4px 0; background: var(--chip); color: var(--ink);
+}
 
 /* tuner page */
 .headstock { display: block; margin: 8px auto 0; }

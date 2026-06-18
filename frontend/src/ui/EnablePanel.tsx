@@ -1,7 +1,5 @@
-// Shared enable panel (top of every page's right column): checkboxes for Mic
-// and Spotify, one button to turn on whatever is checked. Spotify connect is an
-// OAuth redirect, so if both are checked we stash a flag and auto-start the mic
-// when we return with the token.
+// Setup enable panel: check/uncheck Mic and Spotify, hit Update to apply.
+// Unchecking a running source turns it off. Status dots show current state.
 
 import { useEffect } from "react";
 import type { MicApi } from "../engine/useMic";
@@ -27,7 +25,6 @@ export function EnablePanel({
   const micOn = mic.status === "running";
   const spOn = sp.connected;
 
-  // Returned from a Spotify OAuth redirect with the mic requested -> start it.
   useEffect(() => {
     if (sessionStorage.getItem(AUTO_MIC) === "1") {
       sessionStorage.removeItem(AUTO_MIC);
@@ -36,43 +33,39 @@ export function EnablePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const enable = () => {
-    if (wantSpotify && sp.enabled && !spOn) {
-      if (wantMic && !micOn) sessionStorage.setItem(AUTO_MIC, "1");
-      window.location.href = sp.loginHref; // redirect; returns with token
-      return;
-    }
+  const update = () => {
+    // Microphone
     if (wantMic && !micOn) mic.start();
+    else if (!wantMic && micOn) mic.stop();
+    // Spotify
+    if (sp.enabled) {
+      if (wantSpotify && !spOn) {
+        if (wantMic) sessionStorage.setItem(AUTO_MIC, "1"); // restore mic after redirect
+        window.location.href = sp.loginHref;
+        return;
+      }
+      if (!wantSpotify && spOn) sp.disconnect();
+    }
   };
-
-  const bothOn = (!wantMic || micOn) && (!wantSpotify || spOn || !sp.enabled);
 
   return (
     <div className="panel enable-panel">
       <h3>Get set up</h3>
       <label className="enable-row">
-        <input
-          type="checkbox"
-          checked={wantMic}
-          onChange={(e) => setWantMic(e.target.checked)}
-          disabled={micOn}
-        />
-        <span>Microphone {micOn && <em className="ok">· on</em>}</span>
+        <input type="checkbox" checked={wantMic} onChange={(e) => setWantMic(e.target.checked)} />
+        <span>
+          Microphone <Dot on={micOn} /> {micOn ? "on" : "off"}
+        </span>
       </label>
       {sp.enabled && (
         <label className="enable-row">
-          <input
-            type="checkbox"
-            checked={wantSpotify}
-            onChange={(e) => setWantSpotify(e.target.checked)}
-            disabled={spOn}
-          />
-          <span>Spotify {spOn && <em className="ok">· connected</em>}</span>
+          <input type="checkbox" checked={wantSpotify} onChange={(e) => setWantSpotify(e.target.checked)} />
+          <span>
+            Spotify <Dot on={spOn} /> {spOn ? "connected" : "not connected"}
+          </span>
         </label>
       )}
-      <button onClick={enable} disabled={bothOn || (!wantMic && !wantSpotify)}>
-        {bothOn ? "Ready" : "Enable"}
-      </button>
+      <button onClick={update}>Update</button>
       {mic.status === "denied" && (
         <p className="muted small">Mic blocked — allow it in your browser settings.</p>
       )}
@@ -81,4 +74,8 @@ export function EnablePanel({
       )}
     </div>
   );
+}
+
+function Dot({ on }: { on: boolean }) {
+  return <span className={`status-dot ${on ? "on" : "off"}`} aria-hidden />;
 }

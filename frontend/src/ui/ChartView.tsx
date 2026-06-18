@@ -1,6 +1,7 @@
-// Renders the ChordPro sheet inside a fixed-height scroll container with a
-// beat-synced cursor + per-chord color feedback. Metadata/chord cards live on
-// the page; this is just the scrolling chart.
+// ChordPro sheet in a fixed-height scroll box. Scroll is CONTINUOUS, driven by
+// song progress (0..1) so it glides smoothly at tempo instead of jumping per
+// chord. Per-chord coloring still uses the cursor index. Manual scroll pauses
+// auto-scroll; auto-scroll only happens while playing.
 
 import { useEffect, useMemo, useRef } from "react";
 import ChordSheetJS from "chordsheetjs";
@@ -12,7 +13,7 @@ export function ChartView({
   cursorState = null,
   scrollOnly = false,
   playing = false,
-  done = false,
+  progress = 0,
 }: {
   chordpro: string;
   activeChord?: string | null;
@@ -20,7 +21,7 @@ export function ChartView({
   cursorState?: "pending" | "hit" | "miss" | null;
   scrollOnly?: boolean;
   playing?: boolean;
-  done?: boolean;
+  progress?: number; // 0..1 through the song
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -31,9 +32,12 @@ export function ChartView({
     return new ChordSheetJS.HtmlDivFormatter().format(song);
   }, [chordpro]);
 
+  // New run resets the manual-scroll lock.
   useEffect(() => {
     if (playing) userScrolledRef.current = false;
   }, [playing]);
+
+  // User scroll while playing -> stop auto-scrolling (don't fight them).
   useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
@@ -48,6 +52,7 @@ export function ChartView({
     };
   }, [playing]);
 
+  // Per-chord coloring (no scrolling here).
   useEffect(() => {
     const root = sheetRef.current;
     if (!root) return;
@@ -63,18 +68,16 @@ export function ChartView({
       el.classList.toggle("cur-hit", !scrollOnly && onCursor && cursorState === "hit");
       el.classList.toggle("cur-miss", !scrollOnly && onCursor && cursorState === "miss");
     });
-    if (cursorIndex >= 0 && tokens[cursorIndex] && !userScrolledRef.current) {
-      // Center the active chord within the scroll box (instant — smooth lagged
-      // behind fast cursor moves and let the active line drift off screen).
-      tokens[cursorIndex].scrollIntoView({ block: "center", behavior: "auto" });
-    }
   }, [activeChord, cursorIndex, cursorState, scrollOnly, html]);
 
+  // Continuous auto-scroll: map progress onto the scrollable range. Only while
+  // playing and only if the user hasn't taken over.
   useEffect(() => {
-    if (done && boxRef.current && !userScrolledRef.current) {
-      boxRef.current.scrollTo({ top: boxRef.current.scrollHeight, behavior: "smooth" });
-    }
-  }, [done]);
+    const box = boxRef.current;
+    if (!box || !playing || userScrolledRef.current) return;
+    const max = box.scrollHeight - box.clientHeight;
+    box.scrollTop = Math.max(0, Math.min(max, progress * max));
+  }, [progress, playing]);
 
   return (
     <div className="chart">
