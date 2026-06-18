@@ -36,25 +36,31 @@ async def _app_token() -> str | None:
     return _token
 
 
-async def find_track(query: str) -> dict | None:
-    """Best-match track for a 'title artist' query -> {uri, name, artists}."""
+async def find_tracks(query: str, limit: int = 5) -> list[dict]:
+    """Top tracks for a query -> [{uri, name, artists, album}]."""
     token = await _app_token()
     if not token:
-        return None
+        return []
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.get(
             "https://api.spotify.com/v1/search",
-            params={"q": query, "type": "track", "limit": 1},
+            params={"q": query, "type": "track", "limit": limit},
             headers={"Authorization": f"Bearer {token}"},
         )
     if r.status_code != 200:
-        return None
-    items = r.json().get("tracks", {}).get("items", [])
-    if not items:
-        return None
-    t = items[0]
-    return {
-        "uri": t["uri"],
-        "name": t["name"],
-        "artists": ", ".join(a["name"] for a in t["artists"]),
-    }
+        return []
+    return [
+        {
+            "uri": t["uri"],
+            "name": t["name"],
+            "artists": ", ".join(a["name"] for a in t["artists"]),
+            "album": t.get("album", {}).get("name", ""),
+        }
+        for t in r.json().get("tracks", {}).get("items", [])
+    ]
+
+
+async def find_track(query: str) -> dict | None:
+    """Best single match for a 'title artist' query."""
+    tracks = await find_tracks(query, 1)
+    return tracks[0] if tracks else None

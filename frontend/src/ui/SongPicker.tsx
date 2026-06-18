@@ -1,11 +1,11 @@
-// Song selector + import. Three entry paths (spec §5): built-in library,
-// user import (ChordPro paste or Guitar Pro/MusicXML upload), and link-out.
-// We never scrape or republish — link-out just opens the user's URL.
+// Song selector + add/edit. Built-in library + user paste (chords-above-lyrics)
+// and Guitar Pro/MusicXML upload. Editing lets you fix the linked Spotify track
+// via search. No scraping / no PDF.
 
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  importText, importFile, importPdf, getSong, updateSong, deleteSong,
-  type SongMeta,
+  importText, importFile, getSong, updateSong, deleteSong,
+  spotifySearch, type SongMeta, type SpotifyTrack,
 } from "../api";
 
 export function SongPicker({
@@ -13,11 +13,13 @@ export function SongPicker({
   selectedId,
   onSelect,
   onImported,
+  onPanelOpen,
 }: {
   songs: SongMeta[];
   selectedId: string;
   onSelect: (id: string) => void;
   onImported: (id: string) => void;
+  onPanelOpen?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [cp, setCp] = useState("");
@@ -26,20 +28,23 @@ export function SongPicker({
   const [pBpm, setPBpm] = useState("");
   const [pKey, setPKey] = useState("");
   const [pCapo, setPCapo] = useState(0);
-  const [url, setUrl] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
-  // Edit state for the selected (imported) song.
+  // Edit state
   const [editing, setEditing] = useState(false);
   const [eTitle, setETitle] = useState("");
   const [eArtist, setEArtist] = useState("");
   const [eSpotify, setESpotify] = useState("");
   const [eChordpro, setEChordpro] = useState("");
+  const [eQuery, setEQuery] = useState("");
+  const [eResults, setEResults] = useState<SpotifyTrack[]>([]);
 
   const selected = songs.find((s) => s.id === selectedId);
   const canEdit = !!selected && !selected.isBuiltin;
+
+  // Tell the page when a panel is open so it can hide the song below.
+  useEffect(() => onPanelOpen?.(open || editing), [open, editing, onPanelOpen]);
 
   const openEdit = async () => {
     setErr(null);
@@ -49,11 +54,18 @@ export function SongPicker({
       setEArtist(full.artist ?? "");
       setESpotify(full.spotifyUri ?? "");
       setEChordpro(full.chordpro ?? "");
+      setEQuery(`${full.title ?? ""} ${full.artist ?? ""}`.trim());
+      setEResults([]);
       setOpen(false);
       setEditing(true);
     } catch {
       setErr("couldn't load song");
     }
+  };
+
+  const searchSpotify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEResults(await spotifySearch(eQuery));
   };
 
   const saveEdit = async () => {
@@ -64,7 +76,7 @@ export function SongPicker({
         title: eTitle, artist: eArtist, spotifyUri: eSpotify, chordpro: eChordpro,
       });
       setEditing(false);
-      onImported(selectedId); // refresh list, keep selection
+      onImported(selectedId);
     } catch {
       setErr("save failed");
     } finally {
@@ -77,7 +89,7 @@ export function SongPicker({
     setBusy(true);
     try {
       await deleteSong(selectedId);
-      onImported(""); // refresh; selection falls back to first song
+      onImported("");
     } catch {
       setErr("delete failed");
     } finally {
@@ -92,12 +104,7 @@ export function SongPicker({
       const s = await fn();
       onImported(s.id);
       setOpen(false);
-      setCp("");
-      setTitle("");
-      setPArtist("");
-      setPBpm("");
-      setPKey("");
-      setPCapo(0);
+      setCp(""); setTitle(""); setPArtist(""); setPBpm(""); setPKey(""); setPCapo(0);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "import failed");
     } finally {
@@ -118,7 +125,7 @@ export function SongPicker({
           ))}
         </select>
         <button onClick={() => { setEditing(false); setOpen((o) => !o); }}>
-          {open ? "Close" : "Import"}
+          {open ? "Close" : "Add Song"}
         </button>
         {canEdit && (
           <>
@@ -134,16 +141,42 @@ export function SongPicker({
             <h4>Edit song</h4>
             <input placeholder="Title" value={eTitle} onChange={(e) => setETitle(e.target.value)} />
             <input placeholder="Artist" value={eArtist} onChange={(e) => setEArtist(e.target.value)} />
+
+            <h4>Spotify track</h4>
+            <p className="muted small">
+              Linked: {eSpotify ? <code>{eSpotify}</code> : "none"}
+            </p>
+            <form className="spotify-search" onSubmit={searchSpotify}>
+              <input
+                placeholder="Search Spotify (title artist)…"
+                value={eQuery}
+                onChange={(e) => setEQuery(e.target.value)}
+              />
+              <button type="submit" disabled={!eQuery.trim()}>Search</button>
+            </form>
+            {eResults.length > 0 && (
+              <ul className="spotify-results">
+                {eResults.map((t) => (
+                  <li key={t.uri}>
+                    <button
+                      className={eSpotify === t.uri ? "active" : ""}
+                      onClick={() => setESpotify(t.uri)}
+                    >
+                      <strong>{t.name}</strong>{" "}
+                      <span className="muted">{t.artists}{t.album ? ` · ${t.album}` : ""}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <input
               placeholder="Spotify URI (spotify:track:...)"
               value={eSpotify}
               onChange={(e) => setESpotify(e.target.value)}
             />
-            <textarea
-              rows={8}
-              value={eChordpro}
-              onChange={(e) => setEChordpro(e.target.value)}
-            />
+
+            <h4>Chords</h4>
+            <textarea rows={8} value={eChordpro} onChange={(e) => setEChordpro(e.target.value)} />
             <div className="edit-actions">
               <button onClick={saveEdit} disabled={busy}>Save</button>
               <button className="ghost" onClick={() => setEditing(false)}>Cancel</button>
@@ -160,12 +193,7 @@ export function SongPicker({
             <div className="paste-fields">
               <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
               <input placeholder="Singer / artist" value={pArtist} onChange={(e) => setPArtist(e.target.value)} />
-              <input
-                type="number"
-                placeholder="BPM"
-                value={pBpm}
-                onChange={(e) => setPBpm(e.target.value)}
-              />
+              <input type="number" placeholder="BPM" value={pBpm} onChange={(e) => setPBpm(e.target.value)} />
               <input placeholder="Key" value={pKey} onChange={(e) => setPKey(e.target.value)} />
               <label className="capo-field">
                 Capo
@@ -202,14 +230,13 @@ export function SongPicker({
             </button>
             <p className="muted small">
               Paste chords-above-lyrics text. We align the chords, build the chart,
-              and link the Spotify track.
+              and link the Spotify track (you can fix it later via Edit).
             </p>
           </div>
 
           <div className="import-block">
             <h4>Upload Guitar Pro / MusicXML</h4>
             <input
-              ref={fileRef}
               type="file"
               accept=".gp,.gp3,.gp4,.gp5,.gpx,.xml,.musicxml,.mxl"
               onChange={(e) => {
@@ -218,44 +245,6 @@ export function SongPicker({
               }}
             />
             <p className="muted small">Renders as real tab with a play-along cursor.</p>
-          </div>
-
-          <div className="import-block">
-            <h4>Upload a chord-sheet PDF</h4>
-            <input
-              type="file"
-              accept=".pdf,application/pdf"
-              disabled={busy}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handle(() => importPdf(f));
-              }}
-            />
-            <p className="muted small">
-              {busy
-                ? "Converting… reading the PDF and matching the Spotify track."
-                : "Any chord-sheet PDF — we convert it to a playable chart and link the Spotify track."}
-            </p>
-          </div>
-
-          <div className="import-block">
-            <h4>Have a tab on another site?</h4>
-            <div className="linkout">
-              <input
-                placeholder="Paste a tab URL (Ultimate Guitar, Songsterr…)"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-              />
-              <button
-                disabled={!/^https?:\/\//.test(url)}
-                onClick={() => window.open(url, "_blank", "noopener")}
-              >
-                Open
-              </button>
-            </div>
-            <p className="muted small">
-              We link out — we don't copy or host other sites' tabs.
-            </p>
           </div>
 
           {err && <p className="import-err">{err}</p>}

@@ -97,6 +97,19 @@ export async function updateSong(id: string, patch: SongPatch): Promise<Song> {
   return r.json();
 }
 
+export interface SpotifyTrack {
+  uri: string;
+  name: string;
+  artists: string;
+  album: string;
+}
+
+export async function spotifySearch(q: string): Promise<SpotifyTrack[]> {
+  const r = await fetch(`/api/spotify/search?q=${encodeURIComponent(q)}`);
+  if (!r.ok) return [];
+  return (await r.json()).tracks ?? [];
+}
+
 export async function deleteSong(id: string): Promise<void> {
   const r = await fetch(`/api/songs/${id}`, { method: "DELETE" });
   if (!r.ok) throw new Error("delete failed");

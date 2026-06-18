@@ -37,6 +37,14 @@ def status():
             "configured": bool(s.spotify_client_id and s.spotify_client_secret)}
 
 
+@router.get("/search")
+async def search(q: str):
+    from ..spotify_app import find_tracks
+    if not q.strip():
+        return {"tracks": []}
+    return {"tracks": await find_tracks(q, 6)}
+
+
 @router.get("/login")
 def login():
     s = _guard()

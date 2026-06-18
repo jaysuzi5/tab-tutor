@@ -26,6 +26,7 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   const [song, setSong] = useState<Song | null>(null);
   const [tempo, setTempo] = useState(96);
   const [cursorIndex, setCursorIndex] = useState(-1);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const refreshList = (selectId?: string) =>
     listSongs()
@@ -118,8 +119,11 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
           selectedId={selectedId}
           onSelect={setSelectedId}
           onImported={(id) => refreshList(id)}
+          onPanelOpen={setPanelOpen}
         />
 
+        {!panelOpen && (
+        <>
         {song && (
           <div className="song-info">
             <span className="song-title">{song.title}</span>
@@ -178,6 +182,8 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
               done={practice.done}
             />
           </>
+        )}
+        </>
         )}
       </section>
     </main>
