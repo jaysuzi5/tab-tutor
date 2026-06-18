@@ -7,25 +7,7 @@ import {
   importText, importFile, getSong, updateSong, deleteSong,
   spotifySearch, type SongMeta, type SpotifyTrack, type StrumPattern,
 } from "../api";
-
-// Editable list of strumming patterns (note/comment + pattern).
-function StrumRows({ value, onChange }: { value: StrumPattern[]; onChange: (v: StrumPattern[]) => void }) {
-  const set = (i: number, k: keyof StrumPattern, v: string) =>
-    onChange(value.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)));
-  return (
-    <div className="strum-rows">
-      <h4>Strumming patterns</h4>
-      {value.map((s, i) => (
-        <div key={i} className="strum-row">
-          <input placeholder="Note (e.g. Verse)" value={s.label} onChange={(e) => set(i, "label", e.target.value)} />
-          <input className="mono" placeholder="D  D U  U D U" value={s.pattern} onChange={(e) => set(i, "pattern", e.target.value)} />
-          <button className="ghost" onClick={() => onChange(value.filter((_, idx) => idx !== i))}>×</button>
-        </div>
-      ))}
-      <button className="ghost" onClick={() => onChange([...value, { label: "", pattern: "" }])}>+ Add pattern</button>
-    </div>
-  );
-}
+import { StrumEditor } from "./StrumEditor";
 
 export function SongPicker({
   songs,
@@ -58,6 +40,7 @@ export function SongPicker({
   const [eSpotify, setESpotify] = useState("");
   const [eChordpro, setEChordpro] = useState("");
   const [eStrums, setEStrums] = useState<StrumPattern[]>([]);
+  const [eTempo, setETempo] = useState(80);
   const [eQuery, setEQuery] = useState("");
   const [eResults, setEResults] = useState<SpotifyTrack[]>([]);
 
@@ -76,6 +59,7 @@ export function SongPicker({
       setESpotify(full.spotifyUri ?? "");
       setEChordpro(full.chordpro ?? "");
       setEStrums(full.strumming ?? []);
+      setETempo(full.tempo ?? 80);
       setEQuery(`${full.title ?? ""} ${full.artist ?? ""}`.trim());
       setEResults([]);
       setOpen(false);
@@ -96,7 +80,7 @@ export function SongPicker({
     try {
       await updateSong(selectedId, {
         title: eTitle, artist: eArtist, spotifyUri: eSpotify, chordpro: eChordpro,
-        strumming: eStrums.filter((s) => s.label || s.pattern),
+        strumming: eStrums.filter((s) => s.slots && s.slots.length > 0),
       });
       setEditing(false);
       onImported(selectedId);
@@ -200,7 +184,7 @@ export function SongPicker({
 
             <h4>Chords</h4>
             <textarea rows={8} value={eChordpro} onChange={(e) => setEChordpro(e.target.value)} />
-            <StrumRows value={eStrums} onChange={setEStrums} />
+            <StrumEditor value={eStrums} onChange={setEStrums} defaultBpm={eTempo} />
             <div className="edit-actions">
               <button onClick={saveEdit} disabled={busy}>Save</button>
               <button className="ghost" onClick={() => setEditing(false)}>Cancel</button>
@@ -246,7 +230,7 @@ export function SongPicker({
                     key: pKey || undefined,
                     capo: pCapo,
                     text: cp,
-                    strumming: pStrums.filter((s) => s.label || s.pattern),
+                    strumming: pStrums.filter((s) => s.slots && s.slots.length > 0),
                   }),
                 )
               }
@@ -257,7 +241,7 @@ export function SongPicker({
               Paste chords-above-lyrics text. We align the chords, build the chart,
               and link the Spotify track (you can fix it later via Edit).
             </p>
-            <StrumRows value={pStrums} onChange={setPStrums} />
+            <StrumEditor value={pStrums} onChange={setPStrums} defaultBpm={pBpm ? Number(pBpm) : 80} />
           </div>
 
           <div className="import-block">

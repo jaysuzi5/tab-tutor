@@ -67,8 +67,10 @@ class SongMeta(BaseModel):
 
 
 class StrumPattern(BaseModel):
-    label: str = ""      # note/comment, e.g. "Verse"
-    pattern: str = ""    # e.g. "D  D U  U D U"
+    label: str = ""                 # note/comment, e.g. "Verse"
+    bpm: int = 0                    # 0 => use the song tempo
+    subdivision: str = "eighth"     # eighth (8 slots/bar) | triplet (12)
+    slots: list[str] = []           # per slot: "D" down, "U" up, "" rest
 
 
 class Song(SongMeta):

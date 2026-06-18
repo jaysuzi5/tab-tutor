@@ -1,0 +1,79 @@
+// Editable list of strumming patterns: each has a name, bpm, subdivision
+// (eighths or triplets), and a clickable arrow grid (cycle down/up/rest). Plus
+// a play button to hear it.
+
+import type { StrumPattern } from "../api";
+import { playStrum } from "../engine/strumAudio";
+
+const ARROW = (s: string) => (s === "D" ? "↓" : s === "U" ? "↑" : "·");
+const newSlots = (sub: string) => Array(sub === "triplet" ? 12 : 8).fill("D");
+
+export function StrumEditor({
+  value,
+  onChange,
+  defaultBpm,
+}: {
+  value: StrumPattern[];
+  onChange: (v: StrumPattern[]) => void;
+  defaultBpm: number;
+}) {
+  const setRow = (i: number, patch: Partial<StrumPattern>) =>
+    onChange(value.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+
+  const cycle = (i: number, slot: number) =>
+    setRow(i, {
+      slots: value[i].slots.map((s, idx) =>
+        idx === slot ? (s === "D" ? "U" : s === "U" ? "" : "D") : s,
+      ),
+    });
+
+  return (
+    <div className="strum-editor">
+      <h4>Strumming patterns</h4>
+      {value.map((p, i) => (
+        <div key={i} className="se-pattern">
+          <div className="se-head">
+            <input
+              placeholder="Note (e.g. Verse)"
+              value={p.label}
+              onChange={(e) => setRow(i, { label: e.target.value })}
+            />
+            <input
+              type="number"
+              className="se-bpm"
+              placeholder="bpm"
+              value={p.bpm || ""}
+              onChange={(e) => setRow(i, { bpm: Number(e.target.value) })}
+            />
+            <select
+              value={p.subdivision}
+              onChange={(e) =>
+                setRow(i, { subdivision: e.target.value as StrumPattern["subdivision"], slots: newSlots(e.target.value) })
+              }
+            >
+              <option value="eighth">8ths</option>
+              <option value="triplet">Triplets</option>
+            </select>
+            <button className="ghost" onClick={() => playStrum(p, defaultBpm)}>▶</button>
+            <button className="ghost" onClick={() => onChange(value.filter((_, idx) => idx !== i))}>×</button>
+          </div>
+          <div className="se-grid">
+            {p.slots.map((s, slot) => (
+              <button key={slot} className={`se-slot ${s === "" ? "rest" : ""}`} onClick={() => cycle(i, slot)}>
+                {ARROW(s)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <button
+        className="ghost"
+        onClick={() =>
+          onChange([...value, { label: "", bpm: defaultBpm, subdivision: "eighth", slots: newSlots("eighth") }])
+        }
+      >
+        + Add pattern
+      </button>
+    </div>
+  );
+}

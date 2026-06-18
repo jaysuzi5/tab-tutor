@@ -189,24 +189,48 @@ body {
   background: var(--chip); padding: 4px 10px; border-radius: 8px;
 }
 
-/* strumming patterns — editor rows + display */
-.strum-rows { margin-top: 10px; }
-.strum-rows h4 { margin: 0 0 6px; font-size: 14px; }
-.strum-row { display: flex; gap: 6px; margin-bottom: 6px; }
-.strum-row input { margin-bottom: 0; }
-.strum-row input:first-child { flex: 0 0 130px; }
-.strum-row input.mono { flex: 1; font-family: ui-monospace, Menlo, monospace; }
-.strum-row button { margin-top: 0; padding: 4px 10px; }
+/* strumming editor */
+.strum-editor { margin-top: 10px; }
+.strum-editor h4 { margin: 0 0 6px; font-size: 14px; }
+.se-pattern { border: 1px solid #262b33; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.se-head { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.se-head input { margin-bottom: 0; }
+.se-head input:first-child { flex: 1 1 120px; }
+.se-head .se-bpm { flex: 0 0 64px; }
+.se-head select { background: #11141a; color: var(--ink); border: 1px solid #262b33; border-radius: 8px; padding: 7px; }
+.se-head button { margin-top: 0; padding: 4px 10px; }
+.se-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+.se-slot {
+  margin: 0; width: 30px; height: 34px; padding: 0; background: var(--chip); color: var(--ink);
+  font-size: 18px; font-weight: 700;
+}
+.se-slot.rest { opacity: 0.5; }
+
+/* strumming notation (display) */
 .song-strums {
   background: var(--panel); border: 1px solid #262b33; border-radius: 10px;
-  padding: 10px 14px; margin-bottom: 14px;
+  padding: 12px 16px; margin-bottom: 14px;
 }
-.song-strums h4 { margin: 0 0 8px; font-size: 14px; }
-.strum-pattern { display: flex; align-items: baseline; gap: 12px; margin: 4px 0; }
-.strum-label { font-weight: 700; min-width: 90px; color: var(--muted); }
-.strum-text {
-  font-family: ui-monospace, Menlo, Consolas, monospace; white-space: pre;
-  font-size: 16px; letter-spacing: 1px;
+.song-strums h4 { margin: 0 0 10px; }
+.strum-notation { margin: 12px 0; }
+.sn-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sn-play {
+  margin: 0; width: 26px; height: 26px; border-radius: 50%; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.sn-rows { display: inline-block; }
+.sn-row { display: flex; }
+.sn-cell { width: 28px; text-align: center; }
+.sn-arrow { font-size: 22px; line-height: 1.1; height: 26px; font-weight: 700; }
+.sn-label { font-size: 13px; color: var(--muted); height: 18px; }
+.sn-beams { margin-top: 2px; }
+.sn-beam { height: 12px; margin-right: 6px; }
+.sn-beam.eighth { border-bottom: 3px solid var(--ink); }
+.sn-beam.triplet {
+  border-bottom: 2px solid var(--ink); display: flex; align-items: flex-end; justify-content: center;
+}
+.sn-beam.triplet span {
+  background: var(--panel); padding: 0 3px; transform: translateY(50%); font-size: 12px; color: var(--ink);
 }
 
 /* chord cards (every chord in the song) */
