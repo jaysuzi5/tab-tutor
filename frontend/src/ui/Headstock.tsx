@@ -10,9 +10,9 @@ const LAYOUT = [
   { idx: 2, side: "L", row: 0 }, // D (top-left)
   { idx: 1, side: "L", row: 1 }, // A
   { idx: 0, side: "L", row: 2 }, // low E (bottom-left, nearest nut)
-  { idx: 5, side: "R", row: 0 }, // high e (top-right)
+  { idx: 3, side: "R", row: 0 }, // G (top-right)
   { idx: 4, side: "R", row: 1 }, // B
-  { idx: 3, side: "R", row: 2 }, // G (bottom-right)
+  { idx: 5, side: "R", row: 2 }, // high e (bottom-right)
 ] as const;
 
 export function Headstock({

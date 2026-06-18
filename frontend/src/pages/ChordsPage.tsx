@@ -39,6 +39,18 @@ export function ChordsPage({ mic }: { mic: MicApi }) {
   const [duration, setDuration] = useState(60);
   const [timeLeft, setTimeLeft] = useState(60);
   const [result, setResult] = useState<{ count: number; duration: number } | null>(null);
+  const [best, setBest] = useState<number>(() => Number(localStorage.getItem("tt_best_cpm") || 0));
+
+  const finishTimed = (final: number) => {
+    setActive(false);
+    setTarget(null);
+    setResult({ count: final, duration });
+    const cpm = duration ? Math.round((final / duration) * 60) : 0;
+    if (cpm > best) {
+      setBest(cpm);
+      localStorage.setItem("tt_best_cpm", String(cpm));
+    }
+  };
 
   const lastOnsetMsRef = useRef(-1);
   const windowUntilRef = useRef(0);
@@ -95,9 +107,7 @@ export function ChordsPage({ mic }: { mic: MicApi }) {
   useEffect(() => {
     if (!active) return;
     if (timeLeft <= 0) {
-      setActive(false);
-      setResult({ count, duration });
-      setTarget(null);
+      finishTimed(count);
       return;
     }
     const id = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
@@ -176,6 +186,7 @@ export function ChordsPage({ mic }: { mic: MicApi }) {
                   <div className="muted">correct in {result.duration}s · <strong>{perMin}/min</strong></div>
                 </div>
               )}
+              {best > 0 && <p className="muted">🏆 Best: <strong>{best}/min</strong></p>}
               <label className="muted">Session length</label>
               <div className="duration-pick">
                 {DURATIONS.map((d) => (
@@ -192,7 +203,7 @@ export function ChordsPage({ mic }: { mic: MicApi }) {
               </div>
               {target && <><div className="speed-target">{target}</div><ChordDiagram chord={target} /></>}
               <p className="muted">{frame?.live.chord ? `hearing: ${frame.live.chord}` : "strum the chord shown"}</p>
-              <button className="stop" onClick={() => { setActive(false); setResult({ count, duration }); setTarget(null); }}>■ End</button>
+              <button className="stop" onClick={() => finishTimed(count)}>■ End</button>
             </div>
           )}
         </div>

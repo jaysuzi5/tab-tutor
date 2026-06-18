@@ -37,6 +37,8 @@ export function StrummingPage({ mic }: { mic: MicApi }) {
   const running = status === "running";
 
   const [patternIdx, setPatternIdx] = useState(2);
+  const [custom, setCustom] = useState<Sym[]>(["D", "", "D", "U", "", "U", "D", "U"]);
+  const isCustom = patternIdx === PATTERNS.length;
   const [tempo, setTempo] = useState(80);
   const [active, setActive] = useState(false);
   const [countIn, setCountIn] = useState(0);
@@ -45,9 +47,15 @@ export function StrummingPage({ mic }: { mic: MicApi }) {
   const [stats, setStats] = useState<Stats>(ZERO);
   const [result, setResult] = useState<Stats | null>(null);
 
-  const pattern = PATTERNS[patternIdx];
+  const pattern: Pattern = isCustom
+    ? { name: "Custom", slots: custom }
+    : PATTERNS[patternIdx];
   const patternRef = useRef(pattern);
   patternRef.current = pattern;
+
+  // Cycle a custom slot: down -> up -> rest -> down.
+  const cycleSlot = (i: number) =>
+    setCustom((c) => c.map((s, idx) => (idx === i ? (s === "D" ? "U" : s === "U" ? "" : "D") : s)));
 
   const metroRef = useRef<Metronome>(new Metronome());
   const strumsRef = useRef<{ slot: number; errMs: number }[]>([]);
@@ -153,7 +161,7 @@ export function StrummingPage({ mic }: { mic: MicApi }) {
           </p>
 
           {!running ? (
-            <p className="muted">Enable the mic (right) to start.</p>
+            <p className="muted">Enable the mic on the Setup tab to start.</p>
           ) : (
             <>
               <div className="strum-controls">
@@ -165,6 +173,7 @@ export function StrummingPage({ mic }: { mic: MicApi }) {
                   {PATTERNS.map((p, i) => (
                     <option key={p.name} value={i}>{p.name}</option>
                   ))}
+                  <option value={PATTERNS.length}>Custom…</option>
                 </select>
                 <label className="muted">
                   {tempo} bpm
@@ -185,13 +194,17 @@ export function StrummingPage({ mic }: { mic: MicApi }) {
                     key={i}
                     className={`strum-cell ${cursor === i ? "cursor" : ""} ${
                       s === "" ? "rest" : ""
-                    } fx-${fx[i]}`}
+                    } ${isCustom && !active ? "editable" : ""} fx-${fx[i]}`}
+                    onClick={isCustom && !active ? () => cycleSlot(i) : undefined}
                   >
                     <div className="strum-arrow">{ARROW(s)}</div>
                     <div className="strum-count">{COUNT[i]}</div>
                   </div>
                 ))}
               </div>
+              {isCustom && !active && (
+                <p className="muted small">Tap a cell to cycle ↓ → ↑ → rest.</p>
+              )}
 
               {active ? (
                 <div className="strum-live">

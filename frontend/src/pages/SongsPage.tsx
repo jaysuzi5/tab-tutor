@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { MicApi } from "../engine/useMic";
 import type { SpotifyApi } from "../engine/useSpotify";
-import { usePractice, type Mode } from "../engine/usePractice";
+import { usePractice } from "../engine/usePractice";
 import { buildTimeline } from "../engine/timeline";
 import { BUILTIN_SONGS } from "../songs";
 import { listSongs, getSong, type SongMeta, type Song } from "../api";
@@ -9,6 +9,7 @@ import { ChartView } from "../ui/ChartView";
 import { Transport } from "../ui/Transport";
 import { SongPicker } from "../ui/SongPicker";
 import { ChordDiagram } from "../ui/ChordDiagram";
+import { CHORD_SHAPES } from "../engine/chordShapes";
 import { playChord } from "../engine/chordAudio";
 
 const AlphaTabView = lazy(() =>
@@ -23,17 +24,8 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   const [songs, setSongs] = useState<SongMeta[]>([]);
   const [selectedId, setSelectedId] = useState<string>(FALLBACK.id);
   const [song, setSong] = useState<Song | null>(null);
-
-  const [mode, setModeState] = useState<Mode>("playthrough");
   const [tempo, setTempo] = useState(96);
-  const [drillStart, setDrillStart] = useState(0);
   const [cursorIndex, setCursorIndex] = useState(-1);
-  const [practiceChord, setPracticeChord] = useState<string | null>(null);
-
-  const onChordClick = (c: string) => {
-    setPracticeChord(c);
-    playChord(c);
-  };
 
   const refreshList = (selectId?: string) =>
     listSongs()
@@ -55,7 +47,6 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
       .then((s) => {
         setSong(s);
         if (s.tempo) setTempo(s.tempo);
-        setDrillStart(0);
       })
       .catch(() => {
         if (selectedId === FALLBACK.id)
@@ -73,8 +64,8 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   const practice = usePractice({
     chordpro,
     tempo,
-    mode,
-    drillStart,
+    mode: "playthrough",
+    drillStart: 0,
     setExpected,
     setTiming,
     onCursor: setCursorIndex,
@@ -129,16 +120,31 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
           onImported={(id) => refreshList(id)}
         />
 
-        {practiceChord && (
-          <div className="chord-popover">
-            <div className="practice-chord-head">
-              <strong>{practiceChord}</strong>
-              <span>
-                <button onClick={() => playChord(practiceChord)}>▶ Hear it</button>
-                <button className="ghost" onClick={() => setPracticeChord(null)}>×</button>
-              </span>
-            </div>
-            <ChordDiagram chord={practiceChord} size={0.8} />
+        {song && (
+          <div className="song-info">
+            <span className="song-title">{song.title}</span>
+            {song.artist && <span className="song-artist"> — {song.artist}</span>}
+            <span className="song-meta">
+              {song.key && <em>Key {song.key}</em>}
+              {song.tempo && <em>{song.tempo} BPM</em>}
+              {song.capo != null && song.capo > 0 && <em>Capo {song.capo}</em>}
+            </span>
+          </div>
+        )}
+
+        {!isTab && chords.length > 0 && (
+          <div className="song-chords">
+            {chords.map((c) => (
+              <div key={c} className="chord-card">
+                <div className="chord-card-name">{c}</div>
+                {CHORD_SHAPES[c] ? (
+                  <ChordDiagram chord={c} size={0.7} />
+                ) : (
+                  <div className="chord-card-unknown muted small">no diagram</div>
+                )}
+                <button onClick={() => playChord(c)}>▶ Hear it</button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -149,8 +155,6 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
         ) : (
           <>
             <Transport
-              mode={mode}
-              setMode={setModeState}
               tempo={tempo}
               setTempo={setTempo}
               songTempo={songTempo}
@@ -158,9 +162,6 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
               countIn={practice.countIn}
               onPlay={normalStart}
               onStop={practice.stop}
-              chords={progression}
-              drillStart={drillStart}
-              setDrillStart={setDrillStart}
               spotifyStartAvailable={canSpotifyStart}
               onSpotifyStart={syncedStart}
             />
@@ -169,17 +170,12 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
             )}
             <ChartView
               chordpro={chordpro}
-              chords={chords}
-              songKey={song?.key}
-              tempo={song?.tempo}
-              capo={song?.capo}
-              activeChord={mode === "playthrough" || mode === "drill" ? null : activeChord}
+              activeChord={activeChord}
               cursorIndex={cursorIndex}
               cursorState={cursorState}
               scrollOnly={spotifyMode}
               playing={practice.playing}
               done={practice.done}
-              onChordClick={onChordClick}
             />
           </>
         )}

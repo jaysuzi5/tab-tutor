@@ -8,7 +8,7 @@ export interface Timeline {
   beatsPerChord: number;
 }
 
-export function buildTimeline(chordpro: string, beatsPerChord = 2): Timeline {
+export function buildTimeline(chordpro: string, beatsPerChord = 3): Timeline {
   // Strip directives so {key: G} etc. don't get read as chords.
   const body = chordpro.replace(/\{[^}]*\}/g, "");
   const chords = [...body.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);

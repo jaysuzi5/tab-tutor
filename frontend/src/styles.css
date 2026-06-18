@@ -85,6 +85,8 @@ body {
   padding: 10px 0; text-align: center; transition: background 80ms, border-color 80ms;
 }
 .strum-cell.rest { opacity: 0.5; }
+.strum-cell.editable { cursor: pointer; }
+.strum-cell.editable:hover { border-color: var(--accent); opacity: 1; }
 .strum-cell.cursor { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.35); }
 .strum-cell.fx-hit { background: rgba(74,222,128,0.25); border-color: var(--accent); }
 .strum-cell.fx-miss { background: rgba(245,158,11,0.18); border-color: var(--warn); }
@@ -165,7 +167,29 @@ body {
 .license { color: var(--muted); font-size: 12px; margin-top: 8px; }
 
 /* chordsheetjs output */
-.chordsheet { margin-top: 14px; line-height: 2.4; font-size: 16px; }
+/* song info strip (after the picker) */
+.song-info { margin: 4px 0 12px; }
+.song-title { font-size: 22px; font-weight: 800; }
+.song-artist { font-size: 18px; color: var(--muted); }
+.song-meta { display: flex; gap: 10px; margin-top: 6px; }
+.song-meta em {
+  font-style: normal; font-weight: 700; font-size: 14px;
+  background: var(--chip); padding: 4px 10px; border-radius: 8px;
+}
+
+/* chord cards (every chord in the song) */
+.song-chords { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.chord-card {
+  background: var(--panel); border: 1px solid #262b33; border-radius: 10px;
+  padding: 8px 10px; text-align: center;
+}
+.chord-card-name { font-weight: 800; font-size: 16px; margin-bottom: 2px; }
+.chord-card-unknown { padding: 24px 0; }
+.chord-card button { margin-top: 4px; padding: 4px 10px; font-size: 13px; }
+
+/* chart scroll container — keeps the active line centered, not off-screen */
+.chart-scroll { max-height: 62vh; overflow-y: auto; }
+.chordsheet { margin-top: 0; line-height: 2.4; font-size: 16px; }
 /* Bottom-align columns so the lyric stays on one baseline whether or not a
    chord sits above it (no dropped letters under chords). */
 .chordsheet .row { display: flex; flex-wrap: wrap; align-items: flex-end; }
