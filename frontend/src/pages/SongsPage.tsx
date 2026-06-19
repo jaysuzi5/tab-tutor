@@ -195,9 +195,6 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
               <span className="muted small">{offsetBeats > 0 ? `+${offsetBeats}` : offsetBeats} beats</span>
               <button onClick={() => setOffsetBeats((o) => o + 1)} title="scroll later">+</button>
             </div>
-            {practice.done && (
-              <p className="done-banner">🎉 Reached the end — nice run! Hit Play to go again.</p>
-            )}
             <ChartView
               chordpro={chordpro}
               activeChord={activeChord}

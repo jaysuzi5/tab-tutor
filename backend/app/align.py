@@ -221,12 +221,15 @@ def _merge_text(chord_line: str, lyric: str) -> str:
             if bestd is None or d < bestd:
                 bestd, best = d, idx
         pre.setdefault(best, []).append(ch)
-    out: list[str] = []
+    # Attach each chord directly to its word (no space) so it renders ABOVE the
+    # word, not inline. Words stay space-separated.
+    parts: list[str] = []
     for idx, (_s, _e, w) in enumerate(words):
-        out.extend(f"[{c}]" for c in pre.get(idx, []))
-        out.append(w)
-    out.extend(f"[{c}]" for c in pre.get(len(words), []))
-    return " ".join(out)
+        chords_here = "".join(f"[{c}]" for c in pre.get(idx, []))
+        parts.append(chords_here + w)
+    line = " ".join(parts)
+    trailing = "".join(f"[{c}]" for c in pre.get(len(words), []))
+    return (line + (" " + trailing if trailing else "")).strip()
 
 
 def parse_spacetext(raw: str) -> str:

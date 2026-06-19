@@ -56,14 +56,14 @@ export function usePractice({
   // the cursor on the final chord. Kept in a ref so the loop's deps stay stable.
   const endSongRef = useRef<() => void>(() => {});
   endSongRef.current = () => {
+    // Reached the last chord: just stop the autoscroll. Leave the backing track
+    // playing and show no banner — no other action.
     cancelAnimationFrame(rafRef.current);
     metroRef.current.stop();
     setTiming(null);
     setExpected(null);
     setPlaying(false);
     setCountIn(0);
-    setDone(true);
-    onStopRef.current?.();
   };
 
   const loop = useCallback(() => {
