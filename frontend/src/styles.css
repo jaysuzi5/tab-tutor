@@ -256,7 +256,10 @@ body {
   color: var(--accent); font-weight: 700; min-height: 1.3em; line-height: 1.3;
   font-variant-numeric: tabular-nums;
 }
-.chordsheet .lyrics { white-space: pre; }
+/* Reserve a line for empty lyrics so a chord with no lyric beneath it (two
+   chords on one word, e.g. [D][C]word) still sits on the chord row, not below. */
+.chordsheet .lyrics { white-space: pre; display: inline-block; min-height: 1.3em; }
+.chordsheet .lyrics:empty::after { content: "\00a0"; }
 /* Measure/riff lines: custom-rendered, monospace, exact spacing preserved,
    bracketed chords green inline on one line. */
 .chordsheet .measure-line {
