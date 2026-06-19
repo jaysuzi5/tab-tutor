@@ -9,6 +9,14 @@ import {
 } from "../api";
 import { StrumEditor } from "./StrumEditor";
 
+// Bookmarklet: reads the live UG store on a chord page and POSTs the tab JSON
+// to our import endpoint (text/plain to skip the CORS preflight).
+function ugBookmarklet(): string {
+  const api = `${location.origin}/api/songs/import/ug-data`;
+  const code = `(function(){try{var d=window.UGAPP.store.page.data,t=d.tab,v=d.tab_view;var b=JSON.stringify({title:t.song_name,artist:t.artist_name,key:t.tonality_name||(v.meta&&v.meta.tonality),capo:(v.meta&&v.meta.capo)||0,content:v.wiki_tab.content,simplify:true});fetch(${JSON.stringify(api)},{method:'POST',headers:{'Content-Type':'text/plain'},body:b}).then(function(r){return r.json()}).then(function(s){alert('Added to Tab Tutor: '+(s.title||'song'))}).catch(function(e){alert('Tab Tutor import failed: '+e)})}catch(e){alert('Open a chord page on Ultimate Guitar first.')}})();`;
+  return "javascript:" + code;
+}
+
 export function SongPicker({
   songs,
   selectedId,
@@ -264,6 +272,21 @@ export function SongPicker({
               and link the Spotify track (you can fix it later via Edit).
             </p>
             <StrumEditor value={pStrums} onChange={setPStrums} defaultBpm={pBpm ? Number(pBpm) : 80} />
+          </div>
+
+          <div className="import-block">
+            <h4>From Ultimate Guitar</h4>
+            <p className="muted small">
+              UG pages are bot-protected, so this can't be fetched by URL. Drag
+              the button below to your bookmarks bar, then click it while viewing
+              a chord page — it sends the tab here (simplified chords).
+            </p>
+            <a className="bookmarklet" href={ugBookmarklet()} onClick={(e) => e.preventDefault()}>
+              🎸 Add to Tab Tutor
+            </a>
+            <p className="muted small">
+              After running it on a UG page, reopen this dropdown to see the song.
+            </p>
           </div>
 
           <div className="import-block">

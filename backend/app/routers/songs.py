@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
+import re
+from fastapi import APIRouter, HTTPException, UploadFile, File, Request
 from fastapi.responses import Response
-from ..models import Song, SongMeta, ImportChordProReq, ImportTextReq, PatchSongReq
+from ..models import Song, SongMeta, ImportChordProReq, ImportTextReq, ImportUrlReq, PatchSongReq
 from .. import songs
 
 router = APIRouter(prefix="/api/songs", tags=["songs"])
@@ -31,6 +32,57 @@ async def import_text(req: ImportTextReq):
     if track:
         spotify_uri = track["uri"]
     return songs.import_text(req.model_dump(), spotify_uri)
+
+
+@router.post("/import/url", response_model=Song)
+async def import_url(req: ImportUrlReq):
+    from ..ug import import_from_url
+    from ..spotify_app import find_track
+    try:
+        meta = await import_from_url(req.url, req.simplify)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception:
+        raise HTTPException(502, "could not fetch or parse the page")
+    if not meta.get("text", "").strip():
+        raise HTTPException(422, "no chords found on the page")
+    spotify_uri = None
+    if meta.get("title"):
+        track = await find_track(f"{meta['title']} {meta.get('artist') or ''}".strip())
+        if track:
+            spotify_uri = track["uri"]
+    return songs.import_text(meta, spotify_uri)
+
+
+@router.post("/import/ug-data", response_model=Song)
+async def import_ug_data(request: Request):
+    # Body is the JSON captured by the UG bookmarklet, sent as text/plain to
+    # avoid a CORS preflight. {title, artist, key, capo, content, simplify}.
+    import json as _json
+    from ..ug import clean_content
+    from ..spotify_app import find_track
+    raw = (await request.body()).decode("utf-8", "replace")
+    try:
+        p = _json.loads(raw)
+    except Exception:
+        raise HTTPException(400, "invalid payload")
+    content = clean_content(p.get("content", ""), bool(p.get("simplify", True)))
+    if not content.strip():
+        raise HTTPException(422, "no chord content")
+    capo = p.get("capo")
+    if isinstance(capo, str):
+        mm = re.search(r"\d+", capo)
+        capo = int(mm.group()) if mm else 0
+    meta = {
+        "title": p.get("title"), "artist": p.get("artist"), "key": p.get("key"),
+        "capo": capo or 0, "bpm": p.get("bpm"), "text": content,
+    }
+    uri = None
+    if meta["title"]:
+        t = await find_track(f"{meta['title']} {meta.get('artist') or ''}".strip())
+        if t:
+            uri = t["uri"]
+    return songs.import_text(meta, uri)
 
 
 @router.post("/import/file", response_model=Song)

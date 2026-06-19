@@ -11,7 +11,12 @@ app = FastAPI(title="Tab Tutor")
 # Dev: Vite (5173) calls the API (8000). Prod: same origin (FastAPI serves SPA).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    # localhost dev + the UG pages (the bookmarklet POSTs the tab JSON from there).
+    allow_origins=[
+        "http://localhost:5173",
+        "https://tabs.ultimate-guitar.com",
+        "https://www.ultimate-guitar.com",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )

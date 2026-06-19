@@ -440,6 +440,10 @@ textarea.mono {
 .linkout button { margin-top: 0; }
 .small { font-size: 12px; margin: 4px 0 0; }
 .import-err { color: var(--warn); font-size: 13px; }
+.bookmarklet {
+  display: inline-block; background: var(--accent); color: #07210f; font-weight: 700;
+  padding: 8px 16px; border-radius: 8px; text-decoration: none; cursor: grab; margin: 4px 0;
+}
 
 /* alphaTab */
 .alphatab-wrap { padding: 0; overflow: hidden; }

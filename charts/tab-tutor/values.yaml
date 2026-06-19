@@ -1,6 +1,6 @@
 image:
   repository: jaysuzi5/tab-tutor
-  tag: "0.1.30"
+  tag: "0.1.31"
   pullPolicy: IfNotPresent
 
 replicaCount: 1

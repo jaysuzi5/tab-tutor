@@ -93,6 +93,11 @@ class ImportTextReq(BaseModel):
     strumming: list[StrumPattern] = []
 
 
+class ImportUrlReq(BaseModel):
+    url: str
+    simplify: bool = True
+
+
 class PatchSongReq(BaseModel):
     title: Optional[str] = None
     artist: Optional[str] = None
