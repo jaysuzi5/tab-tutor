@@ -3,11 +3,11 @@ import type { MicApi } from "../engine/useMic";
 import type { SpotifyApi } from "../engine/useSpotify";
 import { usePractice } from "../engine/usePractice";
 import { buildTimeline } from "../engine/timeline";
-import { BUILTIN_SONGS } from "../songs";
 import { listSongs, getSong, type SongMeta, type Song } from "../api";
 import { ChartView } from "../ui/ChartView";
 import { Transport } from "../ui/Transport";
 import { SongPicker } from "../ui/SongPicker";
+import { SongList } from "../ui/SongList";
 import { ChordDiagram } from "../ui/ChordDiagram";
 import { CHORD_SHAPES } from "../engine/chordShapes";
 import { playChord } from "../engine/chordAudio";
@@ -18,13 +18,11 @@ const AlphaTabView = lazy(() =>
   import("../ui/AlphaTabView").then((m) => ({ default: m.AlphaTabView })),
 );
 
-const FALLBACK = BUILTIN_SONGS[0];
-
 export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   const { frame, setExpected, setTiming } = mic;
 
   const [songs, setSongs] = useState<SongMeta[]>([]);
-  const [selectedId, setSelectedId] = useState<string>(FALLBACK.id);
+  const [selectedId, setSelectedId] = useState<string>("");
   const [song, setSong] = useState<Song | null>(null);
   const [tempo, setTempo] = useState(96);
   const [cursorIndex, setCursorIndex] = useState(-1);
@@ -37,10 +35,9 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
       .then((list) => {
         setSongs(list);
         if (selectId) setSelectedId(selectId);
-        else if (!list.find((s) => s.id === selectedId) && list[0])
-          setSelectedId(list[0].id);
+        else setSelectedId((cur) => (list.find((s) => s.id === cur) ? cur : list[0]?.id ?? ""));
       })
-      .catch(() => setSongs([{ ...metaOf(FALLBACK.chordpro), id: FALLBACK.id }]));
+      .catch(() => setSongs([]));
 
   useEffect(() => {
     refreshList();
@@ -48,15 +45,16 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   }, []);
 
   useEffect(() => {
+    if (!selectedId) {
+      setSong(null);
+      return;
+    }
     getSong(selectedId)
       .then((s) => {
         setSong(s);
         if (s.tempo) setTempo(s.tempo);
       })
-      .catch(() => {
-        if (selectedId === FALLBACK.id)
-          setSong({ ...metaOf(FALLBACK.chordpro), id: FALLBACK.id, chordpro: FALLBACK.chordpro });
-      });
+      .catch(() => setSong(null));
   }, [selectedId]);
 
   const isTab = song?.format === "gp" || song?.format === "musicxml";
@@ -118,110 +116,103 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
   }, [frame, cursorIndex, progression]);
 
   return (
-    <main className="layout single">
-      <section className="left">
+    <main className="songs-page">
+      <SongList songs={songs} selectedId={selectedId} onSelect={setSelectedId} />
+
+      <div className="song-main">
         <SongPicker
           songs={songs}
           selectedId={selectedId}
-          onSelect={setSelectedId}
           onImported={(id) => refreshList(id)}
           onPanelOpen={setPanelOpen}
         />
 
-        {!panelOpen && (
-        <>
-        {song && (
-          <div className="song-info">
-            <span className="song-title">{song.title}</span>
-            {song.artist && <span className="song-artist"> — {song.artist}</span>}
-            <span className="song-meta">
-              {song.key && <em>Key {song.key}</em>}
-              {song.tempo && <em>{song.tempo} BPM</em>}
-              {song.capo != null && song.capo > 0 && <em>Capo {song.capo}</em>}
-            </span>
-          </div>
+        {!panelOpen && !song && songs.length > 0 && (
+          <p className="muted">Pick a song from the list.</p>
+        )}
+        {!panelOpen && songs.length === 0 && (
+          <p className="muted">No songs yet — click “+ Add Song”.</p>
         )}
 
-        {song?.strumming && song.strumming.length > 0 && (
-          <div className="song-strums">
-            <h4>Strumming pattern</h4>
-            {song.strumming.map((s, i) => (
-              <StrumNotation
-                key={i}
-                pattern={s}
-                songBpm={song.tempo ?? 80}
-                onPlay={() => playStrum(s, song.tempo ?? 80)}
-              />
-            ))}
-          </div>
-        )}
-
-        {!isTab && chords.length > 0 && (
-          <div className="song-chords">
-            {chords.map((c) => (
-              <div key={c} className="chord-card">
-                <div className="chord-card-name">{c}</div>
-                {CHORD_SHAPES[c] ? (
-                  <ChordDiagram chord={c} size={0.7} />
-                ) : (
-                  <div className="chord-card-unknown muted small">no diagram</div>
-                )}
-                <button onClick={() => playChord(c)}>▶ Hear it</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {isTab && song ? (
-          <Suspense fallback={<div className="chart muted">Loading tab renderer…</div>}>
-            <AlphaTabView songId={song.id} />
-          </Suspense>
-        ) : (
+        {!panelOpen && song && (
           <>
-            <Transport
-              tempo={tempo}
-              setTempo={setTempo}
-              songTempo={songTempo}
-              playing={practice.playing}
-              countIn={practice.countIn}
-              onPlay={normalStart}
-              onStop={practice.stop}
-              spotifyStartAvailable={canSpotifyStart}
-              onSpotifyStart={syncedStart}
-            />
-            <div className="sync-offset">
-              <span className="muted small">Scroll sync</span>
-              <button onClick={() => setOffsetBeats((o) => o - 1)} title="scroll earlier">−</button>
-              <span className="muted small">{offsetBeats > 0 ? `+${offsetBeats}` : offsetBeats} beats</span>
-              <button onClick={() => setOffsetBeats((o) => o + 1)} title="scroll later">+</button>
+            <div className="song-info">
+              <span className="song-title">{song.title}</span>
+              {song.artist && <span className="song-artist"> — {song.artist}</span>}
+              <span className="song-meta">
+                {song.key && <em>Key {song.key}</em>}
+                {song.tempo && <em>{song.tempo} BPM</em>}
+                {song.capo != null && song.capo > 0 && <em>Capo {song.capo}</em>}
+              </span>
             </div>
-            <ChartView
-              chordpro={chordpro}
-              activeChord={activeChord}
-              cursorIndex={cursorIndex}
-              cursorState={cursorState}
-              scrollOnly={spotifyMode}
-              playing={practice.playing}
-              progress={progress}
-            />
+
+            {song.strumming && song.strumming.length > 0 && (
+              <div className="song-strums">
+                <h4>Strumming pattern</h4>
+                {song.strumming.map((s, i) => (
+                  <StrumNotation
+                    key={i}
+                    pattern={s}
+                    songBpm={song.tempo ?? 80}
+                    onPlay={() => playStrum(s, song.tempo ?? 80)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {!isTab && chords.length > 0 && (
+              <div className="song-chords">
+                {chords.map((c) => (
+                  <div key={c} className="chord-card">
+                    <div className="chord-card-name">{c}</div>
+                    {CHORD_SHAPES[c] ? (
+                      <ChordDiagram chord={c} size={0.7} />
+                    ) : (
+                      <div className="chord-card-unknown muted small">no diagram</div>
+                    )}
+                    <button onClick={() => playChord(c)}>▶ Hear it</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {isTab ? (
+              <Suspense fallback={<div className="chart muted">Loading tab renderer…</div>}>
+                <AlphaTabView songId={song.id} />
+              </Suspense>
+            ) : (
+              <>
+                <Transport
+                  tempo={tempo}
+                  setTempo={setTempo}
+                  songTempo={songTempo}
+                  playing={practice.playing}
+                  countIn={practice.countIn}
+                  onPlay={normalStart}
+                  onStop={practice.stop}
+                  spotifyStartAvailable={canSpotifyStart}
+                  onSpotifyStart={syncedStart}
+                />
+                <div className="sync-offset">
+                  <span className="muted small">Scroll sync</span>
+                  <button onClick={() => setOffsetBeats((o) => o - 1)} title="scroll earlier">−</button>
+                  <span className="muted small">{offsetBeats > 0 ? `+${offsetBeats}` : offsetBeats} beats</span>
+                  <button onClick={() => setOffsetBeats((o) => o + 1)} title="scroll later">+</button>
+                </div>
+                <ChartView
+                  chordpro={chordpro}
+                  activeChord={activeChord}
+                  cursorIndex={cursorIndex}
+                  cursorState={cursorState}
+                  scrollOnly={spotifyMode}
+                  playing={practice.playing}
+                  progress={progress}
+                />
+              </>
+            )}
           </>
         )}
-        </>
-        )}
-      </section>
+      </div>
     </main>
   );
-}
-
-function metaOf(chordpro: string): SongMeta {
-  const m = (k: string) => chordpro.match(new RegExp(`\\{${k}:\\s*([^}]+)\\}`, "i"))?.[1]?.trim();
-  return {
-    id: "",
-    title: m("title") ?? "Song",
-    artist: m("artist"),
-    tempo: m("tempo") ? Number(m("tempo")) : 96,
-    chords: (m("chords") ?? "").split(/\s+/).filter(Boolean),
-    format: "chordpro",
-    isBuiltin: true,
-  };
 }

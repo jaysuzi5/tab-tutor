@@ -21,7 +21,28 @@ body {
   color: var(--ink);
 }
 
-.app { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.app { max-width: 1500px; margin: 0 auto; padding: 16px; }
+
+/* Songs page: sidebar library + main content */
+.songs-page { display: flex; gap: 16px; margin-top: 16px; align-items: flex-start; }
+.song-sidebar {
+  flex: 0 0 240px; background: var(--panel); border: 1px solid #262b33;
+  border-radius: 12px; padding: 10px; max-height: 82vh; overflow-y: auto;
+}
+.song-main { flex: 1; min-width: 0; }
+.song-group { margin-bottom: 2px; }
+.song-group-head {
+  width: 100%; text-align: left; background: none; color: var(--ink);
+  font-weight: 700; padding: 6px 6px; margin: 0; display: flex; gap: 6px; align-items: center;
+}
+.song-group-head .caret { color: var(--muted); width: 12px; display: inline-block; }
+.song-item {
+  display: block; width: 100%; text-align: left; background: none; color: var(--muted);
+  padding: 5px 8px 5px 26px; margin: 0; border-radius: 6px; font-weight: 400; font-size: 14px;
+}
+.song-item:hover { background: var(--chip); color: var(--ink); }
+.song-item.active { background: var(--accent); color: #07210f; font-weight: 700; }
+@media (max-width: 760px) { .songs-page { flex-direction: column; } .song-sidebar { flex: none; width: 100%; max-height: 200px; } }
 
 .topbar {
   display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;

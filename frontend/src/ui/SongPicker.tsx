@@ -20,13 +20,11 @@ function ugBookmarklet(): string {
 export function SongPicker({
   songs,
   selectedId,
-  onSelect,
   onImported,
   onPanelOpen,
 }: {
   songs: SongMeta[];
   selectedId: string;
-  onSelect: (id: string) => void;
   onImported: (id: string) => void;
   onPanelOpen?: (open: boolean) => void;
 }) {
@@ -135,17 +133,8 @@ export function SongPicker({
   return (
     <div className="songpicker">
       <div className="songpicker-row">
-        <select value={selectedId} onChange={(e) => onSelect(e.target.value)}>
-          {songs.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.isBuiltin ? "★ " : "↑ "}
-              {s.title}
-              {s.artist ? ` — ${s.artist}` : ""} [{s.format}]
-            </option>
-          ))}
-        </select>
         <button onClick={() => { setEditing(false); setOpen((o) => !o); }}>
-          {open ? "Close" : "Add Song"}
+          {open ? "Close" : "+ Add Song"}
         </button>
         {canEdit && (
           <>

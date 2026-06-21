@@ -221,14 +221,20 @@ def _merge_text(chord_line: str, lyric: str) -> str:
             if bestd is None or d < bestd:
                 bestd, best = d, idx
         pre.setdefault(best, []).append(ch)
-    # Attach each chord directly to its word (no space) so it renders ABOVE the
-    # word, not inline. Words stay space-separated.
-    parts: list[str] = []
-    for idx, (_s, _e, w) in enumerate(words):
-        chords_here = "".join(f"[{c}]" for c in pre.get(idx, []))
-        parts.append(chords_here + w)
+    # Attach a single chord directly to its word ([G]word) so it renders ABOVE
+    # the word. When several chords land on one word, space-separate them so each
+    # gets its own slot above the lyrics (e.g. [D] [C]word) — and so the earlier
+    # ones sit on the chord row instead of dropping below.
+    def fmt(chs: list[str], word: str) -> str:
+        if not chs:
+            return word
+        if len(chs) == 1:
+            return f"[{chs[0]}]{word}"
+        return " ".join(f"[{c}]" for c in chs[:-1]) + " " + f"[{chs[-1]}]{word}"
+
+    parts = [fmt(pre.get(idx, []), w) for idx, (_s, _e, w) in enumerate(words)]
     line = " ".join(parts)
-    trailing = "".join(f"[{c}]" for c in pre.get(len(words), []))
+    trailing = " ".join(f"[{c}]" for c in pre.get(len(words), []))
     return (line + (" " + trailing if trailing else "")).strip()
 
 
