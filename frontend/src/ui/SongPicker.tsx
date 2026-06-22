@@ -13,7 +13,7 @@ import { StrumEditor } from "./StrumEditor";
 // to our import endpoint (text/plain to skip the CORS preflight).
 function ugBookmarklet(): string {
   const api = `${location.origin}/api/songs/import/ug-data`;
-  const code = `(function(){try{var d=window.UGAPP.store.page.data,t=d.tab,v=d.tab_view;var b=JSON.stringify({title:t.song_name,artist:t.artist_name,key:t.tonality_name||(v.meta&&v.meta.tonality),capo:(v.meta&&v.meta.capo)||0,content:v.wiki_tab.content,simplify:true});fetch(${JSON.stringify(api)},{method:'POST',headers:{'Content-Type':'text/plain'},body:b}).then(function(r){return r.json()}).then(function(s){alert('Added to Tab Tutor: '+(s.title||'song'))}).catch(function(e){alert('Tab Tutor import failed: '+e)})}catch(e){alert('Open a chord page on Ultimate Guitar first.')}})();`;
+  const code = `(function(){try{var d=window.UGAPP.store.page.data,t=d.tab,v=d.tab_view;var b=JSON.stringify({title:t.song_name,artist:t.artist_name,key:t.tonality_name||(v.meta&&v.meta.tonality),capo:(v.meta&&v.meta.capo)||0,content:v.wiki_tab.content,strummings:v.strummings||[],simplify:true});fetch(${JSON.stringify(api)},{method:'POST',headers:{'Content-Type':'text/plain'},body:b}).then(function(r){return r.json()}).then(function(s){alert('Added to Tab Tutor: '+(s.title||'song'))}).catch(function(e){alert('Tab Tutor import failed: '+e)})}catch(e){alert('Open a chord page on Ultimate Guitar first.')}})();`;
   return "javascript:" + code;
 }
 

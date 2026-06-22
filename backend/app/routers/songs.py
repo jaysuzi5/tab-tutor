@@ -59,7 +59,7 @@ async def import_ug_data(request: Request):
     # Body is the JSON captured by the UG bookmarklet, sent as text/plain to
     # avoid a CORS preflight. {title, artist, key, capo, content, simplify}.
     import json as _json
-    from ..ug import clean_content
+    from ..ug import clean_content, convert_strummings
     from ..spotify_app import find_track
     raw = (await request.body()).decode("utf-8", "replace")
     try:
@@ -76,6 +76,7 @@ async def import_ug_data(request: Request):
     meta = {
         "title": p.get("title"), "artist": p.get("artist"), "key": p.get("key"),
         "capo": capo or 0, "bpm": p.get("bpm"), "text": content,
+        "strumming": convert_strummings(p.get("strummings")),
     }
     uri = None
     if meta["title"]:

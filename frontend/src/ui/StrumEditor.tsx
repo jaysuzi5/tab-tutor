@@ -6,7 +6,7 @@ import type { StrumPattern } from "../api";
 import { playStrum } from "../engine/strumAudio";
 
 const ARROW = (s: string) => (s === "D" ? "↓" : s === "U" ? "↑" : "·");
-const perOf = (sub: string) => (sub === "triplet" ? 3 : 2);
+const perOf = (sub: string) => (sub === "triplet" ? 3 : sub === "sixteenth" ? 4 : 2);
 const perBar = (sub: string) => 4 * perOf(sub); // 4 beats/bar
 const newSlots = (sub: string, bars = 1) => Array(perBar(sub) * bars).fill("D");
 
@@ -58,6 +58,7 @@ export function StrumEditor({
               }}
             >
               <option value="eighth">8ths</option>
+              <option value="sixteenth">16ths</option>
               <option value="triplet">Triplets</option>
             </select>
             <span className="se-bars">

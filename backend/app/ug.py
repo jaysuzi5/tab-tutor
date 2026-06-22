@@ -35,6 +35,32 @@ def _clean(content: str, simplify: bool) -> str:
     return content.replace("[tab]", "").replace("[/tab]", "")
 
 
+def _decode_slot(code: int) -> str:
+    # UG measure codes: 1 = down strum, 2 = up strum; other values (0, 101, 202…)
+    # are hand-motion/ghost strokes with no arrow -> rest in our model.
+    if code == 1:
+        return "D"
+    if code == 2:
+        return "U"
+    return ""
+
+
+def convert_strummings(strummings) -> list[dict]:
+    out: list[dict] = []
+    for s in strummings or []:
+        slots = [_decode_slot((m or {}).get("measure", 0)) for m in s.get("measures", [])]
+        if not any(slots):
+            continue
+        sub = "triplet" if s.get("is_triplet") else ("sixteenth" if s.get("denuminator") == 16 else "eighth")
+        out.append({
+            "label": s.get("part") or "",
+            "bpm": int(s.get("bpm") or 0),
+            "subdivision": sub,
+            "slots": slots,
+        })
+    return out
+
+
 def parse_store(data: dict, simplify: bool = True) -> dict:
     """Extract title/artist/key/capo + cleaned chord text from a UG js-store
     JSON object (already decoded)."""
@@ -52,6 +78,7 @@ def parse_store(data: dict, simplify: bool = True) -> dict:
         "capo": int(capo) if isinstance(capo, int) else 0,
         "bpm": meta.get("bpm"),
         "text": _clean(content, simplify),
+        "strumming": convert_strummings(page.get("tab_view", {}).get("strummings")),
     }
 
 

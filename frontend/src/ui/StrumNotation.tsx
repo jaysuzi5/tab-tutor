@@ -14,15 +14,19 @@ export function StrumNotation({
   songBpm?: number;
   onPlay?: () => void;
 }) {
-  const per = pattern.subdivision === "triplet" ? 3 : 2;
+  const per = pattern.subdivision === "triplet" ? 3 : pattern.subdivision === "sixteenth" ? 4 : 2;
   const beatsPerBar = 4;
   const perBar = beatsPerBar * per;
   const slots = pattern.slots;
-  // Beat numbers restart each bar (1..4); eighths get "&" on the off-beats.
+  // Beat numbers restart each bar; subdivisions label the off-beats.
+  const SIX = ["", "e", "&", "a"];
   const label = (i: number) => {
     const beat = Math.floor(i / per);
+    const pos = i % per;
     const n = String((beat % beatsPerBar) + 1);
-    return per === 2 ? (i % 2 === 0 ? n : "&") : i % 3 === 0 ? n : "";
+    if (per === 2) return pos === 0 ? n : "&";
+    if (per === 4) return pos === 0 ? n : SIX[pos];
+    return pos === 0 ? n : ""; // triplet
   };
   const barGap = (i: number) => (i > 0 && i % perBar === 0 ? { marginLeft: 14 } : undefined);
 

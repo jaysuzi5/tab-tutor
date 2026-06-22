@@ -10,7 +10,7 @@ export function playStrum(p: StrumPattern, songBpm = 80) {
   if (!bpm || !p.slots.length) return;
   ctx = ctx ?? new AudioContext();
   void ctx.resume();
-  const per = p.subdivision === "triplet" ? 3 : 2; // slots per beat
+  const per = p.subdivision === "triplet" ? 3 : p.subdivision === "sixteenth" ? 4 : 2; // slots/beat
   const slotDur = 60 / bpm / per;
   const now = ctx.currentTime + 0.06;
   const bars = p.slots.length > 4 * per ? 1 : 2; // multi-bar once, single bar twice

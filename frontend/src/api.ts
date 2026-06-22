@@ -20,7 +20,7 @@ export interface SongMeta {
 export interface StrumPattern {
   label: string;
   bpm: number;
-  subdivision: "eighth" | "triplet";
+  subdivision: "eighth" | "triplet" | "sixteenth";
   slots: string[]; // "D" | "U" | ""
 }
 
