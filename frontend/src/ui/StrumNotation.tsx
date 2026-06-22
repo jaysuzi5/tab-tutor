@@ -28,7 +28,8 @@ export function StrumNotation({
     if (per === 4) return pos === 0 ? n : SIX[pos];
     return pos === 0 ? n : ""; // triplet
   };
-  const barGap = (i: number) => (i > 0 && i % perBar === 0 ? { marginLeft: 14 } : undefined);
+  const CELL = 18; // compact cell width
+  const barGap = (i: number) => (i > 0 && i % perBar === 0 ? { marginLeft: 9 } : undefined);
 
   const groups: number[] = [];
   for (let i = 0; i < slots.length; i += per) groups.push(i);
@@ -58,7 +59,7 @@ export function StrumNotation({
               <div
                 key={g}
                 className={`sn-beam ${pattern.subdivision}`}
-                style={{ width: n * 28, ...barGap(g) }}
+                style={{ width: n * CELL, ...barGap(g) }}
               >
                 {pattern.subdivision === "triplet" && n === 3 && <span>3</span>}
               </div>

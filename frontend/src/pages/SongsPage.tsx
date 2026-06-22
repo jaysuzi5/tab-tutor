@@ -146,33 +146,34 @@ export function SongsPage({ mic, sp }: { mic: MicApi; sp: SpotifyApi }) {
               </span>
             </div>
 
-            {song.strumming && song.strumming.length > 0 && (
-              <div className="song-strums">
-                <h4>Strumming pattern</h4>
-                {song.strumming.map((s, i) => (
-                  <StrumNotation
-                    key={i}
-                    pattern={s}
-                    songBpm={song.tempo ?? 80}
-                    onPlay={() => playStrum(s, song.tempo ?? 80)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {!isTab && chords.length > 0 && (
-              <div className="song-chords">
-                {chords.map((c) => (
-                  <div key={c} className="chord-card">
-                    <div className="chord-card-name">{c}</div>
-                    {CHORD_SHAPES[c] ? (
-                      <ChordDiagram chord={c} size={0.7} />
-                    ) : (
-                      <div className="chord-card-unknown muted small">no diagram</div>
-                    )}
-                    <button onClick={() => playChord(c)}>▶ Hear it</button>
+            {!isTab && (chords.length > 0 || (song.strumming && song.strumming.length > 0)) && (
+              <div className="detail-cols">
+                <div className="song-chords">
+                  {chords.map((c) => (
+                    <div key={c} className="chord-card">
+                      <div className="chord-card-name">{c}</div>
+                      {CHORD_SHAPES[c] ? (
+                        <ChordDiagram chord={c} size={0.7} />
+                      ) : (
+                        <div className="chord-card-unknown muted small">no diagram</div>
+                      )}
+                      <button onClick={() => playChord(c)}>▶ Hear it</button>
+                    </div>
+                  ))}
+                </div>
+                {song.strumming && song.strumming.length > 0 && (
+                  <div className="song-strums">
+                    <h4>Strumming pattern</h4>
+                    {song.strumming.map((s, i) => (
+                      <StrumNotation
+                        key={i}
+                        pattern={s}
+                        songBpm={song.tempo ?? 80}
+                        onPlay={() => playStrum(s, song.tempo ?? 80)}
+                      />
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
 
