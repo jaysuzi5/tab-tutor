@@ -14,6 +14,7 @@ export function ChordDiagram({ chord, size = 1 }: { chord: string; size?: number
   const shape = CHORD_SHAPES[chord];
   if (!shape) return null;
 
+  const base = shape.baseFret ?? 1; // first fret shown (up-neck shapes)
   const innerW = W - L * 2;
   const innerH = H - TOP - BOT;
   const sGap = innerW / 5; // 6 strings -> 5 gaps
@@ -39,9 +40,15 @@ export function ChordDiagram({ chord, size = 1 }: { chord: string; size?: number
           x2={L + innerW}
           y2={fy(f)}
           stroke="#cbd2da"
-          strokeWidth={f === 0 ? 3.5 : 1}
+          strokeWidth={f === 0 && base === 1 ? 3.5 : 1}
         />
       ))}
+      {/* base-fret label for up-neck shapes (no thick nut) */}
+      {base > 1 && (
+        <text x={L - 6} y={TOP + fGap * 0.7} className="cd-fret" textAnchor="end">
+          {base}fr
+        </text>
+      )}
       {/* strings */}
       {shape.frets.map((_, i) => (
         <line
@@ -66,7 +73,7 @@ export function ChordDiagram({ chord, size = 1 }: { chord: string; size?: number
           return (
             <circle key={`m${i}`} cx={sx(i)} cy={TOP - 13} r={4} className="cd-open" />
           );
-        const cy = TOP + (fret - 0.5) * fGap;
+        const cy = TOP + (fret - base + 0.5) * fGap; // position relative to base fret
         const finger = shape.fingers[i];
         return (
           <g key={`d${i}`}>
